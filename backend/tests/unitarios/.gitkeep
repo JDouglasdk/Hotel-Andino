@@ -1,0 +1,5 @@
+# Tests unitarios
+
+`node --test`, sin servidor levantado. Prioridad de mañana (por tiempo): la
+lógica nueva de mayor riesgo — regla de derecho de comidas, descuento de
+inventario, cálculo de caja diaria. No perseguir cobertura total.

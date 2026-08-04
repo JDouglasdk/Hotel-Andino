@@ -1,0 +1,4 @@
+# Tests de integración
+
+`node --test` + `supertest` contra la app Express real (con una BD SQLite
+`:memory:` o un archivo temporal, no la de desarrollo).

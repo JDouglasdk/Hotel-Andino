@@ -1,0 +1,12 @@
+{
+  "name": "hotel-app-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend estático del restaurante del Hotel Andino",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\""
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}
