@@ -1,6 +1,0 @@
-# Rutas (mapeo URL → controlador)
-
-Una función `crearRutasX({ controlador, requiereSesion })` por archivo, que
-devuelve un `express.Router()`. Aquí se decide qué endpoint requiere sesión
-y, si aplica, qué rol (`crearRequiereRol('admin', 'jefeDeCaja')` desde
-`middlewares/autenticacion.js`). Se montan en `src/app.js`.

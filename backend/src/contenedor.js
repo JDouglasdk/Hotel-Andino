@@ -4,21 +4,27 @@
 // por parámetro — nunca hace `require` directo de un repositorio. Así la
 // lógica de negocio en servicios/ no depende de cómo se conecta a SQLite.
 //
-// Ejemplo de cómo se va llenando esto a medida que se construyen módulos
-// mañana (usuarios ya como referencia, el resto queda comentado hasta que
-// exista el archivo):
-//
-// const { crearUsuariosRepositorio } = require('./modelos/usuariosRepositorio');
-// const { crearAutenticacionServicio } = require('./servicios/autenticacionServicio');
-// const { crearUsuariosServicio } = require('./servicios/usuariosServicio');
+// Los módulos que faltan (huéspedes, menú, ingredientes, pedidos) se agregan
+// aquí siguiendo el mismo patrón: repositorio primero, servicio después,
+// registrar ambos abajo.
 
-function crearContenedor(conexion) { // eslint-disable-line no-unused-vars
+const { crearUsuariosRepositorio } = require('./modelos/usuariosRepositorio');
+const { crearAutenticacionServicio } = require('./servicios/autenticacionServicio');
+const { crearUsuariosServicio } = require('./servicios/usuariosServicio');
+
+function crearContenedor(conexion) {
   const repositorios = {
-    // usuariosRepositorio: crearUsuariosRepositorio(conexion),
+    usuariosRepositorio: crearUsuariosRepositorio(conexion),
   };
 
+  const autenticacionServicio = crearAutenticacionServicio({ usuariosRepositorio: repositorios.usuariosRepositorio });
+
   const servicios = {
-    // autenticacionServicio: crearAutenticacionServicio({ usuariosRepositorio: repositorios.usuariosRepositorio }),
+    autenticacionServicio,
+    usuariosServicio: crearUsuariosServicio({
+      usuariosRepositorio: repositorios.usuariosRepositorio,
+      autenticacionServicio,
+    }),
   };
 
   return { repositorios, servicios };

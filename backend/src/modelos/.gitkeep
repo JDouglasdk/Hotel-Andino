@@ -1,7 +1,0 @@
-# Repositorios (acceso a datos)
-
-Una función `crearXRepositorio(conexion)` por archivo (ej. `usuariosRepositorio.js`).
-Recibe la conexión SQLite por parámetro, nunca hace `require` de `db/conexion.js`
-directamente — así se puede probar con una conexión `:memory:` en tests.
-Solo queries parametrizadas (`conexion.prepare(...).run/get/all(valores)`),
-nunca concatenar SQL con datos de entrada.

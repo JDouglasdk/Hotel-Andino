@@ -5,10 +5,15 @@ const helmet = require('helmet');
 const timeout = require('connect-timeout');
 const { crearConfigSesion } = require('./config/sesion');
 const { entorno } = require('./config/entorno');
+const { crearRequiereSesion } = require('./middlewares/autenticacion');
 const { crearLimitadorGeneral } = require('./middlewares/limitadorGeneral');
 const { manejadorErrores } = require('./middlewares/manejadorErrores');
+const { crearAutenticacionControlador } = require('./controladores/autenticacionControlador');
+const { crearRutasAutenticacion } = require('./rutas/autenticacion');
+const { crearUsuariosControlador } = require('./controladores/usuariosControlador');
+const { crearRutasUsuarios } = require('./rutas/usuarios');
 
-function crearApp(contenedor, { rutaSesionesDb } = {}) { // eslint-disable-line no-unused-vars
+function crearApp(contenedor, { rutaSesionesDb } = {}) {
   const app = express();
   app.set('trust proxy', entorno.confiarEnProxy);
   app.use(helmet());
@@ -17,12 +22,21 @@ function crearApp(contenedor, { rutaSesionesDb } = {}) { // eslint-disable-line 
   app.use(session(crearConfigSesion(rutaSesionesDb)));
   app.use('/api', crearLimitadorGeneral());
 
+  const requiereSesion = crearRequiereSesion({ usuariosServicio: contenedor.servicios.usuariosServicio });
+
+  const autenticacionControlador = crearAutenticacionControlador({
+    autenticacionServicio: contenedor.servicios.autenticacionServicio,
+    usuariosServicio: contenedor.servicios.usuariosServicio,
+  });
+  app.use('/api/auth', crearRutasAutenticacion({ controlador: autenticacionControlador, requiereSesion }));
+
+  const usuariosControlador = crearUsuariosControlador({ usuariosServicio: contenedor.servicios.usuariosServicio });
+  app.use('/api/usuarios', crearRutasUsuarios({ controlador: usuariosControlador, requiereSesion }));
+
   // ---------------------------------------------------------------------
-  // Las rutas de negocio se montan aquí. Orden sugerido para mañana (ver
-  // docs/decisiones.md para el reparto entre las dos personas del equipo):
+  // Rutas de negocio que faltan (ver docs/decisiones.md — reparto entre
+  // las dos personas del equipo):
   //
-  //   const requiereSesion = crearRequiereSesion({ usuariosServicio: contenedor.servicios.usuariosServicio });
-  //   app.use('/api/auth', crearRutasAutenticacion({ controlador: ..., requiereSesion }));
   //   app.use('/api/huespedes', crearRutasHuespedes({ ... }));
   //   app.use('/api/categorias', crearRutasCategorias({ ... }));
   //   app.use('/api/platos', crearRutasPlatos({ ... }));

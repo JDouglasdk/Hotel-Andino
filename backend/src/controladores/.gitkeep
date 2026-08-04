@@ -1,7 +1,0 @@
-# Controladores (traducen HTTP ↔ servicio)
-
-Una función `crearXControlador({ xServicio })` por archivo, que devuelve
-handlers `(req, res, next) => {...}`. Validan la forma de la entrada con
-`zod` y llaman al servicio — no contienen lógica de negocio ni acceden a la
-base de datos directamente. Cualquier error del servicio se pasa con
-`next(error)` para que lo resuelva `middlewares/manejadorErrores.js`.
