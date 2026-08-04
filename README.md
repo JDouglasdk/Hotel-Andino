@@ -14,10 +14,12 @@ mismo patrón que `restaurante-app`, reciclado donde aplica.
 
 ## Estado actual
 
-Cimientos únicamente: estructura de carpetas, migraciones de base de datos,
-seguridad de base (helmet, sesión con cookie `httpOnly`, rate limiting) y
-páginas placeholder por rol. **Cero lógica de negocio construida todavía.**
-Ver `docs/decisiones.md` para qué se construye mañana y quién.
+Cimientos + módulo de autenticación/usuarios completo y probado (login,
+sesión, rate limiting en login, CRUD de usuarios restringido a admin,
+16 tests de integración en verde). **El resto de la lógica de negocio
+(huéspedes, menú, comandas, inventario, caja) todavía no existe** — son
+solo páginas placeholder por rol. Ver `docs/decisiones.md` para qué falta
+y quién lo construye.
 
 ## Cómo arrancar
 
