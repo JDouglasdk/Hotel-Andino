@@ -18,9 +18,24 @@
   </div>
 
   <main id="contenido-panel" hidden>
-    <h1>Panel cocina</h1>
-    <p>Placeholder. Pendiente: cola de comandas en <code>pendiente</code>/
-      <code>en_preparacion</code>, marcar como <code>listo</code>.</p>
+    <div class="panel-titulo">
+      <h1>Panel cocina</h1>
+      <button type="button" id="boton-actualizar-pedidos" class="boton boton--secundario">Actualizar</button>
+    </div>
+
+    <p id="error-cocina" class="banner-error" hidden></p>
+
+    <div class="tablero-cocina">
+      <section class="seccion-panel">
+        <h2>Pendientes</h2>
+        <div id="cola-pendientes" class="cola-pedidos"></div>
+      </section>
+
+      <section class="seccion-panel">
+        <h2>En preparación</h2>
+        <div id="cola-en-preparacion" class="cola-pedidos"></div>
+      </section>
+    </div>
   </main>
 
   <script src="/js/comun/dialogo.js" defer></script>
