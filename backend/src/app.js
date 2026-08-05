@@ -18,6 +18,8 @@ const { crearPlatosControlador } = require('./controladores/platosControlador');
 const { crearRutasPlatos } = require('./rutas/platos');
 const { crearHuespedesControlador } = require('./controladores/huespedesControlador');
 const { crearRutasHuespedes } = require('./rutas/huespedes');
+const { crearPedidosControlador } = require('./controladores/pedidosControlador');
+const { crearRutasPedidos } = require('./rutas/pedidos');
 
 function crearApp(contenedor, { rutaSesionesDb } = {}) {
   const app = express();
@@ -48,12 +50,14 @@ function crearApp(contenedor, { rutaSesionesDb } = {}) {
   const huespedesControlador = crearHuespedesControlador({ huespedesServicio: contenedor.servicios.huespedesServicio });
   app.use('/api/huespedes', crearRutasHuespedes({ controlador: huespedesControlador, requiereSesion }));
 
+  const pedidosControlador = crearPedidosControlador({ pedidosServicio: contenedor.servicios.pedidosServicio });
+  app.use('/api/pedidos', crearRutasPedidos({ controlador: pedidosControlador, requiereSesion }));
+
   // ---------------------------------------------------------------------
   // Rutas de negocio que faltan (ver docs/decisiones.md — reparto entre
   // las dos personas del equipo):
   //
   //   app.use('/api/ingredientes', crearRutasIngredientes({ ... }));
-  //   app.use('/api/pedidos', crearRutasPedidos({ ... }));
   //   app.use('/api/reportes', crearRutasReportes({ ... })); // incluye caja diaria
   // ---------------------------------------------------------------------
 
