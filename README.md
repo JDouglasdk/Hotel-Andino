@@ -14,13 +14,21 @@ mismo patrón que `restaurante-app`, reciclado donde aplica.
 
 ## Estado actual
 
-Cimientos + módulo de autenticación/usuarios y módulo de menú
-(categorías/platos, CRUD restringido a admin) completos y probados (login,
-sesión, rate limiting en login, CRUD de usuarios restringido a admin,
-33 tests de integración en verde). **El resto de la lógica de negocio
-(huéspedes, comandas, inventario, caja) todavía no existe** — son
-solo páginas placeholder por rol. Ver `docs/decisiones.md` para qué falta
-y quién lo construye.
+Cimientos + módulo de autenticación/usuarios, módulo de menú
+(categorías/platos), módulo de huéspedes y la máquina de estados de
+comanda (pedidos: crear con validación de huésped/plato/disponibilidad,
+transición de estado por rol, cancelación) completos y probados —
+55 tests de integración en verde. `pedidosServicio` ya deja el enganche
+listo para las dos piezas que faltan (validación de derecho de comidas y
+descuento de inventario), vía un placeholder en `contenedor.js` que se
+reemplaza sin tocar el resto del código.
+
+**Todavía no existe**: validación de derecho de comidas, descuento
+automático de inventario y caja diaria — son de la otra persona del
+equipo. Tampoco hay frontend funcional (las páginas por rol siguen siendo
+placeholder). Ver `docs/decisiones.md` para el reparto completo y
+`docs/superpowers/specs/2026-08-04-maquina-estados-comanda-design.md`
+para el contrato exacto de los puntos de enganche.
 
 ## Cómo arrancar
 
@@ -46,5 +54,7 @@ cd backend && npm test
 cd frontend && npm test
 ```
 
-Ambos corren, mismo formato (`node --test`), sin ningún test propio
-todavía — se agregan junto con cada módulo de lógica de negocio.
+Mismo formato en ambos (`node --test`). Backend: 55 tests de integración
+en verde (auth/usuarios, menú, huéspedes, pedidos). Frontend: sin tests
+propios todavía — no hay funcionalidad real que probar hasta que se
+construya la interfaz.
