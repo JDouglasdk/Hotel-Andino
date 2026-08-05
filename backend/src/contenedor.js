@@ -4,23 +4,26 @@
 // por parámetro — nunca hace `require` directo de un repositorio. Así la
 // lógica de negocio en servicios/ no depende de cómo se conecta a SQLite.
 //
-// Los módulos que faltan (huéspedes, ingredientes, pedidos) se agregan
-// aquí siguiendo el mismo patrón: repositorio primero, servicio después,
-// registrar ambos abajo.
+// Los módulos que faltan (ingredientes, pedidos) se agregan aquí siguiendo
+// el mismo patrón: repositorio primero, servicio después, registrar ambos
+// abajo.
 
 const { crearUsuariosRepositorio } = require('./modelos/usuariosRepositorio');
 const { crearCategoriasRepositorio } = require('./modelos/categoriasRepositorio');
 const { crearPlatosRepositorio } = require('./modelos/platosRepositorio');
+const { crearHuespedesRepositorio } = require('./modelos/huespedesRepositorio');
 const { crearAutenticacionServicio } = require('./servicios/autenticacionServicio');
 const { crearUsuariosServicio } = require('./servicios/usuariosServicio');
 const { crearCategoriasServicio } = require('./servicios/categoriasServicio');
 const { crearPlatosServicio } = require('./servicios/platosServicio');
+const { crearHuespedesServicio } = require('./servicios/huespedesServicio');
 
 function crearContenedor(conexion) {
   const repositorios = {
     usuariosRepositorio: crearUsuariosRepositorio(conexion),
     categoriasRepositorio: crearCategoriasRepositorio(conexion),
     platosRepositorio: crearPlatosRepositorio(conexion),
+    huespedesRepositorio: crearHuespedesRepositorio(conexion),
   };
 
   const autenticacionServicio = crearAutenticacionServicio({ usuariosRepositorio: repositorios.usuariosRepositorio });
@@ -37,6 +40,9 @@ function crearContenedor(conexion) {
     platosServicio: crearPlatosServicio({
       platosRepositorio: repositorios.platosRepositorio,
       categoriasRepositorio: repositorios.categoriasRepositorio,
+    }),
+    huespedesServicio: crearHuespedesServicio({
+      huespedesRepositorio: repositorios.huespedesRepositorio,
     }),
   };
 
