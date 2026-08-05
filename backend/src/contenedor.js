@@ -20,6 +20,7 @@ const { crearPedidosServicio } = require('./servicios/pedidosServicio');
 const { crearIngredientesServicio } = require('./servicios/ingredientesServicio');
 const { crearDerechoDeComidasServicio } = require('./servicios/derechoDeComidasServicio');
 const { crearInventarioServicio } = require('./servicios/inventarioServicio');
+const { crearReportesServicio } = require('./servicios/reportesServicio');
 
 function crearContenedor(conexion) {
   const repositorios = {
@@ -70,6 +71,9 @@ function crearContenedor(conexion) {
         ingredientesServicio,
         conexion,
       }),
+    }),
+    reportesServicio: crearReportesServicio({
+      pedidosRepositorio: repositorios.pedidosRepositorio,
     }),
   };
 

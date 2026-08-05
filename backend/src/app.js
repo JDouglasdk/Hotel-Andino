@@ -22,6 +22,8 @@ const { crearPedidosControlador } = require('./controladores/pedidosControlador'
 const { crearRutasPedidos } = require('./rutas/pedidos');
 const { crearIngredientesControlador } = require('./controladores/ingredientesControlador');
 const { crearRutasIngredientes } = require('./rutas/ingredientes');
+const { crearReportesControlador } = require('./controladores/reportesControlador');
+const { crearRutasReportes } = require('./rutas/reportes');
 
 function crearApp(contenedor, { rutaSesionesDb } = {}) {
   const app = express();
@@ -58,10 +60,8 @@ function crearApp(contenedor, { rutaSesionesDb } = {}) {
   const ingredientesControlador = crearIngredientesControlador({ ingredientesServicio: contenedor.servicios.ingredientesServicio });
   app.use('/api/ingredientes', crearRutasIngredientes({ controlador: ingredientesControlador, requiereSesion }));
 
-  // ---------------------------------------------------------------------
-  // Ruta que falta: /api/reportes (Task 4 de
-  // docs/superpowers/plans/2026-08-04-inventario-derecho-comidas-reportes.md)
-  // ---------------------------------------------------------------------
+  const reportesControlador = crearReportesControlador({ reportesServicio: contenedor.servicios.reportesServicio });
+  app.use('/api/reportes', crearRutasReportes({ controlador: reportesControlador, requiereSesion }));
 
   const publicDir = path.join(__dirname, '../../frontend/public');
   app.use(express.static(publicDir));

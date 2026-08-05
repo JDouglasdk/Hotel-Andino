@@ -16,6 +16,11 @@ function crearPedidosRepositorio(conexion) {
       AND estado != 'cancelado'
       AND date(creado_en, '-5 hours') = date('now', '-5 hours')
   `);
+  const listarEntregadosHoyStmt = conexion.prepare(`
+    SELECT * FROM pedidos
+    WHERE estado = 'entregado'
+      AND date(creado_en, '-5 hours') = date('now', '-5 hours')
+  `);
 
   function itemADominio(fila) {
     return {
@@ -82,6 +87,9 @@ function crearPedidosRepositorio(conexion) {
     },
     franjasConsumidasHoy(huespedId) {
       return franjasConsumidasHoyStmt.all({ huespedId }).map((fila) => fila.franja);
+    },
+    listarEntregadosHoy() {
+      return listarEntregadosHoyStmt.all().map(pedidoADominio);
     },
   };
 }
