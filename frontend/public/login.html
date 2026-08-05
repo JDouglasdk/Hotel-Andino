@@ -4,14 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Iniciar sesión — Hotel Andino</title>
-  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/componentes.css">
 </head>
-<body>
-  <main>
+<body class="pagina-login">
+  <main class="tarjeta-login">
     <h1>Hotel Andino — Restaurante</h1>
-    <p>Placeholder de login. Formulario real pendiente de construir
-      (correo + contraseña, POST a <code>/api/auth/login</code>).</p>
+
+    <p id="cargando-login">Verificando sesión…</p>
+
+    <form id="formulario-login" class="formulario" hidden>
+      <p id="error-login" class="banner-error" hidden></p>
+
+      <div class="campo">
+        <label for="correo">Correo</label>
+        <input type="email" id="correo" name="correo" maxlength="254" required autocomplete="username">
+      </div>
+
+      <div class="campo">
+        <label for="contrasena">Contraseña</label>
+        <input type="password" id="contrasena" name="contrasena" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" id="boton-ingresar" class="boton boton--primario">Ingresar</button>
+      <button type="button" id="boton-olvide-contrasena" class="boton boton--enlace">¿Olvidaste tu contraseña?</button>
+    </form>
   </main>
+  <script src="/js/comun/dialogo.js" defer></script>
   <script src="/js/login.js" defer></script>
 </body>
 </html>

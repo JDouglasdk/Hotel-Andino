@@ -1,7 +1,0 @@
-# JS de cada panel
-
-Un archivo por página (`login.js`, `admin.js`, `mesero.js`, `cocina.js`,
-`jefeDeCaja.js`), ES modules o scripts simples con `defer`. Regla dura del
-proyecto: cero HTML embebido en JS — nada de template strings con
-etiquetas ni `innerHTML` con marcado armado. Construir DOM con
-`document.createElement` / `textContent`.

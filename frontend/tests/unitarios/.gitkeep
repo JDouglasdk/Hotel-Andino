@@ -1,4 +1,0 @@
-# Tests de frontend
-
-`node --test` + `jsdom`, sobre las funciones puras de cada `js/*.js`
-(construcción de DOM, validaciones en vivo) — no sobre el navegador real.

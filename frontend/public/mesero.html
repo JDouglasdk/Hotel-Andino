@@ -4,14 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel mesero — Hotel Andino</title>
-  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/componentes.css">
 </head>
 <body>
-  <main>
+  <div id="encabezado-contenedor"></div>
+
+  <p id="estado-carga">Cargando…</p>
+
+  <div id="estado-error-sesion" class="estado-error" hidden>
+    <p>No se pudo verificar tu sesión.</p>
+    <button type="button" id="boton-reintentar-sesion" class="boton boton--secundario">Reintentar</button>
+  </div>
+
+  <main id="contenido-panel" hidden>
     <h1>Panel mesero</h1>
     <p>Placeholder. Pendiente: identificar huésped por documento, validar
       derecho de comidas y registrar comanda.</p>
   </main>
+
+  <script src="/js/comun/dialogo.js" defer></script>
+  <script src="/js/comun/clienteApi.js" defer></script>
+  <script src="/js/comun/sesion.js" defer></script>
+  <script src="/js/comun/header.js" defer></script>
+  <script src="/js/comun/panel.js" defer></script>
   <script src="/js/mesero.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,69 @@
+/* Fundamentos: reset, variables de color/tipografía/espaciado, layout base. */
+
+:root {
+  --color-fondo: #F7F7F5;
+  --color-superficie: #FFFFFF;
+  --color-borde: #D9D9D5;
+  --color-texto: #1F2421;
+  --color-texto-secundario: #5B6360;
+  --color-acento: #2563EB;
+  --color-acento-hover: #1D4ED8;
+  --color-exito: #15803D;
+  --color-exito-fondo: #DCFCE7;
+  --color-error: #B91C1C;
+  --color-error-fondo: #FEE2E2;
+  --color-rol-admin: #7C3AED;
+  --color-rol-mesero: #B45309;
+  --color-rol-cocina: #B91C1C;
+  --color-rol-jefeDeCaja: #0F766E;
+  --fuente-base: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radio-base: 8px;
+  --espacio-1: 4px;
+  --espacio-2: 8px;
+  --espacio-3: 16px;
+  --espacio-4: 24px;
+  --espacio-5: 32px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--fuente-base);
+  color: var(--color-texto);
+  background: var(--color-fondo);
+  line-height: 1.5;
+}
+
+h1, h2, h3 {
+  line-height: 1.25;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--espacio-4);
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: var(--color-acento);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-acento);
+  outline-offset: 2px;
+}
