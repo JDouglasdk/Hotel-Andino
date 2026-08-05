@@ -12,6 +12,8 @@ const { crearAutenticacionControlador } = require('./controladores/autenticacion
 const { crearRutasAutenticacion } = require('./rutas/autenticacion');
 const { crearUsuariosControlador } = require('./controladores/usuariosControlador');
 const { crearRutasUsuarios } = require('./rutas/usuarios');
+const { crearCategoriasControlador } = require('./controladores/categoriasControlador');
+const { crearRutasCategorias } = require('./rutas/categorias');
 
 function crearApp(contenedor, { rutaSesionesDb } = {}) {
   const app = express();
@@ -33,12 +35,14 @@ function crearApp(contenedor, { rutaSesionesDb } = {}) {
   const usuariosControlador = crearUsuariosControlador({ usuariosServicio: contenedor.servicios.usuariosServicio });
   app.use('/api/usuarios', crearRutasUsuarios({ controlador: usuariosControlador, requiereSesion }));
 
+  const categoriasControlador = crearCategoriasControlador({ categoriasServicio: contenedor.servicios.categoriasServicio });
+  app.use('/api/categorias', crearRutasCategorias({ controlador: categoriasControlador, requiereSesion }));
+
   // ---------------------------------------------------------------------
   // Rutas de negocio que faltan (ver docs/decisiones.md — reparto entre
   // las dos personas del equipo):
   //
   //   app.use('/api/huespedes', crearRutasHuespedes({ ... }));
-  //   app.use('/api/categorias', crearRutasCategorias({ ... }));
   //   app.use('/api/platos', crearRutasPlatos({ ... }));
   //   app.use('/api/ingredientes', crearRutasIngredientes({ ... }));
   //   app.use('/api/pedidos', crearRutasPedidos({ ... }));
