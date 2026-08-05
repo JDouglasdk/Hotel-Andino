@@ -18,9 +18,29 @@
   </div>
 
   <main id="contenido-panel" hidden>
-    <h1>Panel jefe de caja</h1>
-    <p>Placeholder. Pendiente: inventario de ingredientes y flujo de caja
-      diario (total recaudado a partir de comandas entregadas).</p>
+    <div class="panel-titulo">
+      <h1>Panel jefe de caja</h1>
+      <button type="button" id="boton-actualizar-reportes" class="boton boton--secundario">Actualizar</button>
+    </div>
+
+    <section class="seccion-panel">
+      <h2>Caja del día</h2>
+      <p id="error-caja-del-dia" class="banner-error" hidden></p>
+      <div id="resumen-caja-del-dia" class="resumen-caja"></div>
+    </section>
+
+    <section class="seccion-panel">
+      <h2>Platos servidos por franja</h2>
+      <p id="error-platos-por-franja" class="banner-error" hidden></p>
+      <div id="contenido-platos-por-franja"></div>
+    </section>
+
+    <section class="seccion-panel">
+      <h2>Inventario de ingredientes</h2>
+      <p class="nota-seccion">Solo lectura: la actualización de stock la realiza el administrador.</p>
+      <p id="error-inventario" class="banner-error" hidden></p>
+      <div id="contenido-inventario"></div>
+    </section>
   </main>
 
   <script src="/js/comun/dialogo.js" defer></script>
