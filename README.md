@@ -22,12 +22,20 @@ cancelación), ingredientes/recetas, validación real de derecho de
 comidas, descuento automático de inventario y caja diaria — 78 tests de
 integración en verde.
 
-**Frontend — Fase 0 (cimientos) completa**: login funcional, guarda de
-sesión por rol y header persistente montados en los 4 paneles
-(`admin`, `mesero`, `cocina`, `jefeDeCaja`). El cuerpo de cada panel
-sigue siendo placeholder — la lógica de negocio de cada rol es el
-siguiente sub-proyecto. Ver `docs/decisiones.md` para el reparto
-completo.
+**Frontend completo**: login funcional, guarda de sesión por rol y
+header persistente en los 4 paneles, cada uno con su lógica de negocio
+real (no placeholder):
+
+- **Mesero**: identifica huésped por documento, registra comanda por
+  franja con validación real de derecho de comidas.
+- **Cocina**: cola de comandas (`pendiente`/`en_preparacion`) con
+  transición de estado y cancelación confirmada.
+- **Jefe de caja**: caja del día, platos servidos por franja e
+  inventario (solo lectura).
+- **Admin**: usuarios, alta de huéspedes, menú (categorías/platos) e
+  ingredientes (con actualización de stock).
+
+Ver `docs/decisiones.md` para el reparto completo.
 
 ## Cómo arrancar
 
@@ -40,9 +48,8 @@ npm start
 ```
 
 Sirve en `http://localhost:3000`. Rutas de página: `/login`, `/admin`,
-`/mesero`, `/cocina`, `/jefeDeCaja`. Login, guarda de sesión por rol y
-header (con logout) son funcionales en las 5; el cuerpo de cada panel de
-rol sigue siendo placeholder.
+`/mesero`, `/cocina`, `/jefeDeCaja` — las 5 son funcionales de punta a
+punta.
 
 Admin de desarrollo sembrado por migración: `admin@hotelandino.com` /
 `Admin123!` — cambiar antes de cualquier uso fuera de desarrollo.
@@ -56,7 +63,7 @@ cd frontend && npm test
 
 Mismo formato en ambos (`node --test`). Backend: 78 tests de integración
 en verde (auth/usuarios, menú, huéspedes, pedidos, ingredientes/recetas,
-derecho de comidas, inventario, caja diaria). Frontend: 42 tests
-unitarios en verde (`node --test` + `jsdom`) — dialogo.js, clienteApi.js,
-sesion.js, header.js, panel.js, login y la estructura de los 4 paneles
-de rol.
+derecho de comidas, inventario, caja diaria). Frontend: 95 tests
+unitarios en verde (`node --test` + `jsdom`) — cimientos compartidos
+(dialogo.js, clienteApi.js, sesion.js, header.js, panel.js), login, y
+los 4 paneles de rol con su lógica de negocio.
