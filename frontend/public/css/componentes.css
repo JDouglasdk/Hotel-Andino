@@ -219,6 +219,57 @@
   margin: 0;
 }
 
+/* Panel admin: formularios de alta y tablas con acciones por fila. */
+
+.campo textarea {
+  padding: var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: #FFFFFF;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.campos-agrupados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.campos-agrupados:disabled {
+  opacity: 0.6;
+}
+
+/* Sin flechitas de incremento/decremento — el valor se escribe a mano. */
+.entrada-numerica {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.entrada-numerica::-webkit-outer-spin-button,
+.entrada-numerica::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.control-stock {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.entrada-stock {
+  width: 6rem;
+  padding: var(--espacio-1) var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-base);
+  font-size: 1rem;
+}
+
 .dialogo-overlay {
   position: fixed;
   inset: 0;
