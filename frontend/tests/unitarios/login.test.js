@@ -130,6 +130,56 @@ test('un error de red muestra un mensaje genérico propio', async () => {
   assert.match(banner.textContent, /no se pudo conectar/i);
 });
 
+test('un 200 con body malformado en el login muestra el mensaje genérico de red', async () => {
+  const dom = cargarPaginaLogin();
+  dom.window.fetch = async (ruta) => {
+    if (ruta === '/api/auth/yo') return { status: 401, ok: false, json: async () => ({}) };
+    return { status: 200, ok: true, json: async () => { throw new SyntaxError('body invalido'); } };
+  };
+
+  ejecutarScript(dom, RUTA_LOGIN_JS);
+  await dom.window.Comun._loginListo;
+
+  dom.window.document.getElementById('formulario-login').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  const banner = dom.window.document.getElementById('error-login');
+  assert.match(banner.textContent, /no se pudo conectar/i);
+});
+
+test('un error de negocio sin la forma { error: { mensaje } } muestra un mensaje genérico, no revienta', async () => {
+  const dom = cargarPaginaLogin();
+  dom.window.fetch = async (ruta) => {
+    if (ruta === '/api/auth/yo') return { status: 401, ok: false, json: async () => ({}) };
+    return { status: 400, ok: false, json: async () => ({ mensaje: 'formato inesperado, sin campo error' }) };
+  };
+
+  ejecutarScript(dom, RUTA_LOGIN_JS);
+  await dom.window.Comun._loginListo;
+
+  dom.window.document.getElementById('formulario-login').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  const banner = dom.window.document.getElementById('error-login');
+  assert.equal(banner.hidden, false);
+  assert.match(banner.textContent, /error inesperado/i);
+});
+
+test('sesión existente con body malformado no redirige — muestra el formulario', async () => {
+  const dom = cargarPaginaLogin();
+  dom.window.fetch = async () => ({ status: 200, ok: true, json: async () => { throw new SyntaxError('body invalido'); } });
+  let redirigidoA = null;
+  dom.window.Comun._loginRedirigir = (ruta) => { redirigidoA = ruta; };
+
+  ejecutarScript(dom, RUTA_LOGIN_JS);
+  await dom.window.Comun._loginListo;
+
+  assert.equal(redirigidoA, null);
+  assert.equal(dom.window.document.getElementById('formulario-login').hidden, false);
+});
+
 test('"olvidaste tu contraseña" abre el panel informativo, sin llamar a la API', async () => {
   const dom = cargarPaginaLogin();
   let llamadasFetch = 0;

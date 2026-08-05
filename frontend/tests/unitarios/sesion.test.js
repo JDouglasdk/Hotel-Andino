@@ -66,3 +66,14 @@ test('una respuesta de servidor inesperada (500) tampoco redirige', async () => 
   assert.equal(resultado.error, 'RED');
   assert.equal(redirigidoA, null);
 });
+
+test('un 200 con body malformado no redirige — resuelve { error: "RED" }', async () => {
+  const dom = crearDomConSesion();
+  dom.window.fetch = async () => ({ status: 200, ok: true, json: async () => { throw new SyntaxError('body invalido'); } });
+  let redirigidoA = null;
+
+  const resultado = await dom.window.Comun.sesion.verificar({ rolEsperado: 'admin', alRedirigir: (r) => { redirigidoA = r; } });
+
+  assert.equal(resultado.error, 'RED');
+  assert.equal(redirigidoA, null);
+});

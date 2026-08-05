@@ -60,3 +60,17 @@ test('confirmar en el diálogo de "Salir" llama a POST /api/auth/logout', async 
   assert.equal(rutaLlamada, '/api/auth/logout');
   assert.equal(metodoLlamado, 'POST');
 });
+
+test('si el logout falla por error de red, no redirige — avisa y deja reintentar', async () => {
+  const { dom, contenedor } = crearDomConHeader();
+  dom.window.fetch = async () => { throw new Error('fallo de red'); };
+
+  dom.window.Comun.header.construir({ contenedor, usuario: { nombreCompleto: 'Ana Torres', rol: 'admin' } });
+  dom.window.document.querySelector('.encabezado-salir').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  dom.window.document.querySelector('.dialogo-confirmar').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  const mensaje = dom.window.document.querySelector('.dialogo-mensaje');
+  assert.notEqual(mensaje, null, 'debe mostrar un aviso de que no se pudo cerrar sesión');
+  assert.match(mensaje.textContent, /no se pudo cerrar sesión/i);
+});

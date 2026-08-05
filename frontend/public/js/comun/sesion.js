@@ -18,7 +18,12 @@ window.Comun.sesion = {
       return { error: 'RED' };
     }
 
-    const usuario = await respuesta.json();
+    let usuario;
+    try {
+      usuario = await respuesta.json();
+    } catch {
+      return { error: 'RED' };
+    }
 
     if (usuario.rol !== rolEsperado) {
       alRedirigir(`/${usuario.rol}`);

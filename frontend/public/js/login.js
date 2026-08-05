@@ -39,12 +39,24 @@ window.Comun = window.Comun || {};
       }
 
       if (respuesta.status !== 200) {
-        const cuerpo = await respuesta.json();
-        mostrarError(cuerpo.error.mensaje);
+        let cuerpo;
+        try {
+          cuerpo = await respuesta.json();
+        } catch {
+          mostrarError('No se pudo conectar. Intenta de nuevo.');
+          return;
+        }
+        mostrarError((cuerpo && cuerpo.error && cuerpo.error.mensaje) || 'Ocurrió un error inesperado. Intenta de nuevo.');
         return;
       }
 
-      const usuario = await respuesta.json();
+      let usuario;
+      try {
+        usuario = await respuesta.json();
+      } catch {
+        mostrarError('No se pudo conectar. Intenta de nuevo.');
+        return;
+      }
       redirigir(`/${usuario.rol}`);
     } catch (error) {
       mostrarError('No se pudo conectar. Intenta de nuevo.');
@@ -61,7 +73,12 @@ window.Comun = window.Comun || {};
       return false;
     }
     if (respuesta.status === 200) {
-      const usuario = await respuesta.json();
+      let usuario;
+      try {
+        usuario = await respuesta.json();
+      } catch {
+        return false;
+      }
       redirigir(`/${usuario.rol}`);
       return true;
     }
