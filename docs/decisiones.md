@@ -111,7 +111,8 @@ Solo una persona del equipo conoce el código de `restaurante-app` a fondo
   hay que reemplazar ese registro con la implementación real, respetando
   la misma firma; `pedidosServicio` no se toca. Ver
   `docs/superpowers/specs/2026-08-04-maquina-estados-comanda-design.md`
-  para el detalle completo del contrato.
+  para el detalle completo del contrato — ver la sección "Detalles que
+  el contrato no cubre todavía" antes de implementar.
 - **La otra persona**: construye las piezas 100% nuevas, que no requieren
   conocer `restaurante-app` — validación de derecho de comidas, descuento
   de inventario, caja diaria. Ver ticket en GitHub Issues del repo.

@@ -216,6 +216,42 @@ test('GET /api/pedidos filtra por estado', async () => {
   assert.equal(respuesta.body[0].id, pedido1.body.id);
 });
 
+test('GET /api/pedidos/:id devuelve el pedido con sus items', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const { huesped, plato } = await crearHuespedYPlato(adminAgente);
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  const creado = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.id, franja: 'almuerzo', items: [{ platoId: plato.id, cantidad: 1 }] });
+
+  const respuesta = await meseroAgente.get(`/api/pedidos/${creado.body.id}`);
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.body.id, creado.body.id);
+  assert.equal(Array.isArray(respuesta.body.items), true);
+  assert.equal(respuesta.body.items.length > 0, true);
+});
+
+test('GET /api/pedidos/:id con id inexistente responde 404', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  const respuesta = await meseroAgente.get('/api/pedidos/9999');
+
+  assert.equal(respuesta.status, 404);
+  assert.equal(respuesta.body.error.codigo, 'NO_ENCONTRADO');
+});
+
+test('PATCH /api/pedidos/:id/estado con id inexistente responde 404', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  const respuesta = await meseroAgente.patch('/api/pedidos/9999/estado').send({ estado: 'en_preparacion' });
+
+  assert.equal(respuesta.status, 404);
+  assert.equal(respuesta.body.error.codigo, 'NO_ENCONTRADO');
+});
+
 test('GET /api/pedidos filtra por franja', async () => {
   const { app, contenedor } = crearAppDePrueba();
   const adminAgente = await iniciarSesionAdmin(app);

@@ -1,4 +1,4 @@
-const { ErrorDeNegocio } = require('../utilidades/errores');
+const { ErrorDeNegocio, ErrorNoEncontrado } = require('../utilidades/errores');
 
 // Debe coincidir exactamente con el CHECK de la columna `estado` en
 // backend/src/db/migraciones/007_crear_pedidos.sql. Clave "estadoActual->nuevoEstado".
@@ -31,7 +31,7 @@ function crearPedidosServicio({ pedidosRepositorio, huespedesRepositorio, platos
   function verificarPedidoExiste(id) {
     const pedido = pedidosRepositorio.buscarPorId(id);
     if (!pedido) {
-      throw new ErrorDeNegocio(`El pedido ${id} no existe`, { codigo: 'NO_ENCONTRADO', status: 404 });
+      throw new ErrorNoEncontrado(`El pedido ${id} no existe`);
     }
     return pedido;
   }

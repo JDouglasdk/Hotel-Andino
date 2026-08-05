@@ -75,6 +75,31 @@ Dos sub-módulos nuevos, mismo patrón de capas
 // Lanza ErrorDeNegocio si no hay stock.
 ```
 
+#### Detalles que el contrato no cubre todavía
+
+- **Un `throw` de `descontarPorPedido` no revierte el pedido.**
+  `pedidosRepositorio.crear` ya hizo commit de su propia transacción antes
+  de que se llame a este hook, así que si el descuento de inventario
+  falla, el pedido queda persistido igual (en estado `pendiente`) sin
+  haber descontado nada. No hay una transacción conjunta que cubra ambas
+  operaciones.
+- **Cancelar un pedido no reintegra inventario.** Ninguna transición de
+  estado, incluida `cancelado`, vuelve a llamar a `inventarioServicio`.
+  Si el módulo de inventario necesita reponer el stock al cancelar, es
+  responsabilidad de quien lo construya añadir esa pieza aparte — este
+  contrato no expone un hook tipo `reintegrarPorPedido`.
+- **`items` no viene deduplicado por `platoId`.** Si un pedido tiene dos
+  líneas con el mismo plato, `descontarPorPedido` recibe dos entradas
+  separadas para ese plato, no una sola sumada.
+- **`pedidosRepositorio` todavía no tiene forma de consultar por
+  huésped.** No expone filtro por `huespedId` ni conteo de franjas ya
+  consumidas en el día. Quien implemente
+  `derechoDeComidasServicio.validarDerecho` va a necesitar agregar su
+  propia manera de leer esos datos (un método nuevo en
+  `pedidosRepositorio`, o un repositorio propio) para poder contar
+  cuántas franjas distintas ya consumió hoy un huésped, tal como pide la
+  regla de negocio.
+
 `pedidosServicio` las llama tal cual y deja que sus errores propaguen sin
 envolverlos ni reinterpretarlos — el `manejadorErrores` global ya sabe
 manejar cualquier `ErrorDeNegocio`.

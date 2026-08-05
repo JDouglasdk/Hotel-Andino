@@ -71,7 +71,7 @@ function crearPedidosRepositorio(conexion) {
         valores.franja = franja;
       }
       const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
-      const filas = conexion.prepare(`SELECT * FROM pedidos ${where} ORDER BY creado_en`).all(valores);
+      const filas = conexion.prepare(`SELECT * FROM pedidos ${where} ORDER BY creado_en, id`).all(valores);
       return filas.map(pedidoADominio);
     },
   };
