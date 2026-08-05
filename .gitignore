@@ -4,7 +4,3 @@ node_modules/
 *.db-journal
 .DS_Store
 coverage/
-Diagrama hotel.drawio
-.claude/skills/
-.worktrees/
-superpowers/

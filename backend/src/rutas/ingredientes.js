@@ -1,13 +1,13 @@
 const express = require('express');
 
-function crearRutasPlatos({ controlador, requiereSesion, requiereRol }) {
+function crearRutasIngredientes({ controlador, requiereSesion, requiereRol }) {
   const router = express.Router();
 
   router.get('/', requiereSesion, controlador.listar);
-  router.get('/:id', requiereSesion, controlador.obtenerPorId);
   router.post('/', requiereSesion, requiereRol('admin'), controlador.crear);
+  router.patch('/:id/stock', requiereSesion, requiereRol('admin'), controlador.editarStock);
 
   return router;
 }
 
-module.exports = { crearRutasPlatos };
+module.exports = { crearRutasIngredientes };

@@ -1,0 +1,8 @@
+# Servicios (lógica de negocio)
+
+Una función `crearXServicio({ repositorio1, repositorio2, ... })` por archivo.
+Aquí vive la regla de negocio real — ej. `pedidosServicio.js` es donde se
+valida el derecho de comidas del huésped y se descuenta inventario, NO en el
+controlador ni en el repositorio. Errores de negocio se lanzan como
+`ErrorDeNegocio` / `ErrorNoEncontrado` (ver `utilidades/errores.js`), nunca
+como `res.status(...)` directo — eso es responsabilidad del controlador.
