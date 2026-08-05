@@ -18,9 +18,15 @@ async function iniciarSesionRol(app, contenedor, rol, correo) {
 }
 
 async function crearHuespedYPlato(adminAgente) {
-  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '111111', nombreCompleto: 'Carlos Ruiz', tipoHuesped: 'ordinario' });
+  // tipoHuesped 'vip' (3 franjas/día) a propósito: varios tests de este
+  // archivo crean 2 pedidos en franjas distintas para el mismo huésped
+  // (no están probando la regla de derecho de comidas, están probando
+  // filtros/transiciones — un huésped permisivo evita que choquen).
+  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '111111', nombreCompleto: 'Carlos Ruiz', tipoHuesped: 'vip' });
   const categoria = await adminAgente.post('/api/categorias').send({ nombre: 'Entradas' });
   const plato = await adminAgente.post('/api/platos').send({ categoriaId: categoria.body.id, nombre: 'Empanadas', precio: 8000 });
+  const ingrediente = await adminAgente.post('/api/ingredientes').send({ nombre: 'Harina', cantidadStock: 1000, unidadMedida: 'kg' });
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 1 }] });
   return { huesped: huesped.body, plato: plato.body };
 }
 
@@ -266,4 +272,112 @@ test('GET /api/pedidos filtra por franja', async () => {
   assert.equal(respuesta.status, 200);
   assert.equal(respuesta.body.length, 1);
   assert.equal(respuesta.body[0].id, pedidoCena.body.id);
+});
+
+test('ordinario es bloqueado al pedir una segunda franja distinta el mismo día', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '222222', nombreCompleto: 'Ana Gómez', tipoHuesped: 'ordinario' });
+  const categoria = await adminAgente.post('/api/categorias').send({ nombre: 'Entradas' });
+  const plato = await adminAgente.post('/api/platos').send({ categoriaId: categoria.body.id, nombre: 'Sopa', precio: 5000 });
+  const ingrediente = await adminAgente.post('/api/ingredientes').send({ nombre: 'Verdura', cantidadStock: 1000, unidadMedida: 'kg' });
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 1 }] });
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'desayuno', items: [{ platoId: plato.body.id, cantidad: 1 }] });
+  const respuesta = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'almuerzo', items: [{ platoId: plato.body.id, cantidad: 1 }] });
+
+  assert.equal(respuesta.status, 409);
+  assert.equal(respuesta.body.error.codigo, 'DERECHO_COMIDAS_EXCEDIDO');
+});
+
+test('ordinario puede repetir un pedido en la misma franja sin exceder su derecho', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '444444', nombreCompleto: 'Pedro Ruiz', tipoHuesped: 'ordinario' });
+  const categoria = await adminAgente.post('/api/categorias').send({ nombre: 'Entradas' });
+  const plato = await adminAgente.post('/api/platos').send({ categoriaId: categoria.body.id, nombre: 'Sopa', precio: 5000 });
+  const ingrediente = await adminAgente.post('/api/ingredientes').send({ nombre: 'Verdura', cantidadStock: 1000, unidadMedida: 'kg' });
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 1 }] });
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  const primero = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'desayuno', items: [{ platoId: plato.body.id, cantidad: 1 }] });
+  const segundo = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'desayuno', items: [{ platoId: plato.body.id, cantidad: 1 }] });
+
+  assert.equal(primero.status, 201);
+  assert.equal(segundo.status, 201);
+});
+
+test('vip puede pedir en sus 3 franjas distintas el mismo día', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '555555', nombreCompleto: 'Luisa Vip', tipoHuesped: 'vip' });
+  const categoria = await adminAgente.post('/api/categorias').send({ nombre: 'Entradas' });
+  const plato = await adminAgente.post('/api/platos').send({ categoriaId: categoria.body.id, nombre: 'Sopa', precio: 5000 });
+  const ingrediente = await adminAgente.post('/api/ingredientes').send({ nombre: 'Verdura', cantidadStock: 1000, unidadMedida: 'kg' });
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 1 }] });
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  for (const franja of ['desayuno', 'almuerzo', 'cena']) {
+    const respuesta = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja, items: [{ platoId: plato.body.id, cantidad: 1 }] });
+    assert.equal(respuesta.status, 201);
+  }
+});
+
+test('cancelar un pedido libera esa franja para el límite de comidas', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '666666', nombreCompleto: 'Marta Ruiz', tipoHuesped: 'ordinario' });
+  const categoria = await adminAgente.post('/api/categorias').send({ nombre: 'Entradas' });
+  const plato = await adminAgente.post('/api/platos').send({ categoriaId: categoria.body.id, nombre: 'Sopa', precio: 5000 });
+  const ingrediente = await adminAgente.post('/api/ingredientes').send({ nombre: 'Verdura', cantidadStock: 1000, unidadMedida: 'kg' });
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 1 }] });
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  const primero = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'desayuno', items: [{ platoId: plato.body.id, cantidad: 1 }] });
+  await meseroAgente.patch(`/api/pedidos/${primero.body.id}/estado`).send({ estado: 'cancelado' });
+
+  const respuesta = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'almuerzo', items: [{ platoId: plato.body.id, cantidad: 1 }] });
+
+  assert.equal(respuesta.status, 201);
+});
+
+test('crear un pedido descuenta el stock según la receta', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '777777', nombreCompleto: 'Jorge Ruiz', tipoHuesped: 'vip' });
+  const categoria = await adminAgente.post('/api/categorias').send({ nombre: 'Entradas' });
+  const plato = await adminAgente.post('/api/platos').send({ categoriaId: categoria.body.id, nombre: 'Sopa', precio: 5000 });
+  const ingrediente = await adminAgente.post('/api/ingredientes').send({ nombre: 'Verdura', cantidadStock: 10, unidadMedida: 'kg' });
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 2 }] });
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'almuerzo', items: [{ platoId: plato.body.id, cantidad: 3 }] });
+
+  const ingredientes = await adminAgente.get('/api/ingredientes');
+  const actualizado = ingredientes.body.find((i) => i.id === ingrediente.body.id);
+  assert.equal(actualizado.cantidadStock, 4); // 10 - (2 * 3)
+});
+
+test('crear un pedido con stock insuficiente responde 409 STOCK_INSUFICIENTE', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '888888', nombreCompleto: 'Elena Ruiz', tipoHuesped: 'vip' });
+  const categoria = await adminAgente.post('/api/categorias').send({ nombre: 'Entradas' });
+  const plato = await adminAgente.post('/api/platos').send({ categoriaId: categoria.body.id, nombre: 'Sopa', precio: 5000 });
+  const ingrediente = await adminAgente.post('/api/ingredientes').send({ nombre: 'Verdura', cantidadStock: 1, unidadMedida: 'kg' });
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 1 }] });
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  const respuesta = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'almuerzo', items: [{ platoId: plato.body.id, cantidad: 5 }] });
+
+  assert.equal(respuesta.status, 409);
+  assert.equal(respuesta.body.error.codigo, 'STOCK_INSUFICIENTE');
+
+  // Limitación conocida y documentada (ver docs/decisiones.md): el pedido
+  // ya se había creado y comprometido en su propia transacción antes de
+  // que el descuento de inventario fallara — queda persistido en
+  // pendiente, sin inventario descontado. No es un bug de este plan.
+  const pedidos = await meseroAgente.get('/api/pedidos?estado=pendiente');
+  assert.ok(pedidos.body.some((p) => p.huespedId === huesped.body.id));
 });

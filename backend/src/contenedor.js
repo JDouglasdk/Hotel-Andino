@@ -18,16 +18,8 @@ const { crearPlatosServicio } = require('./servicios/platosServicio');
 const { crearHuespedesServicio } = require('./servicios/huespedesServicio');
 const { crearPedidosServicio } = require('./servicios/pedidosServicio');
 const { crearIngredientesServicio } = require('./servicios/ingredientesServicio');
-
-// TODO: reemplazar estos dos placeholders con la implementación real de
-// derecho de comidas / descuento de inventario (Task 3 de
-// docs/superpowers/plans/2026-08-04-inventario-derecho-comidas-reportes.md).
-const derechoDeComidasServicioPlaceholder = {
-  validarDerecho() {}, // permite todo
-};
-const inventarioServicioPlaceholder = {
-  descontarPorPedido() {}, // no hace nada
-};
+const { crearDerechoDeComidasServicio } = require('./servicios/derechoDeComidasServicio');
+const { crearInventarioServicio } = require('./servicios/inventarioServicio');
 
 function crearContenedor(conexion) {
   const repositorios = {
@@ -41,6 +33,11 @@ function crearContenedor(conexion) {
   };
 
   const autenticacionServicio = crearAutenticacionServicio({ usuariosRepositorio: repositorios.usuariosRepositorio });
+
+  const ingredientesServicio = crearIngredientesServicio({
+    ingredientesRepositorio: repositorios.ingredientesRepositorio,
+    recetasRepositorio: repositorios.recetasRepositorio,
+  });
 
   const servicios = {
     autenticacionServicio,
@@ -60,16 +57,19 @@ function crearContenedor(conexion) {
     huespedesServicio: crearHuespedesServicio({
       huespedesRepositorio: repositorios.huespedesRepositorio,
     }),
-    ingredientesServicio: crearIngredientesServicio({
-      ingredientesRepositorio: repositorios.ingredientesRepositorio,
-      recetasRepositorio: repositorios.recetasRepositorio,
-    }),
+    ingredientesServicio,
     pedidosServicio: crearPedidosServicio({
       pedidosRepositorio: repositorios.pedidosRepositorio,
       huespedesRepositorio: repositorios.huespedesRepositorio,
       platosRepositorio: repositorios.platosRepositorio,
-      derechoDeComidasServicio: derechoDeComidasServicioPlaceholder,
-      inventarioServicio: inventarioServicioPlaceholder,
+      derechoDeComidasServicio: crearDerechoDeComidasServicio({
+        huespedesRepositorio: repositorios.huespedesRepositorio,
+        pedidosRepositorio: repositorios.pedidosRepositorio,
+      }),
+      inventarioServicio: crearInventarioServicio({
+        ingredientesServicio,
+        conexion,
+      }),
     }),
   };
 

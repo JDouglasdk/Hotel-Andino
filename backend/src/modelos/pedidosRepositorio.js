@@ -10,6 +10,12 @@ function crearPedidosRepositorio(conexion) {
   const cambiarEstadoStmt = conexion.prepare('UPDATE pedidos SET estado = @estado WHERE id = @id');
   const buscarPedidoPorIdStmt = conexion.prepare('SELECT * FROM pedidos WHERE id = ?');
   const buscarItemsPorPedidoStmt = conexion.prepare('SELECT * FROM items_pedido WHERE pedido_id = ?');
+  const franjasConsumidasHoyStmt = conexion.prepare(`
+    SELECT DISTINCT franja FROM pedidos
+    WHERE huesped_id = @huespedId
+      AND estado != 'cancelado'
+      AND date(creado_en, '-5 hours') = date('now', '-5 hours')
+  `);
 
   function itemADominio(fila) {
     return {
@@ -73,6 +79,9 @@ function crearPedidosRepositorio(conexion) {
       const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
       const filas = conexion.prepare(`SELECT * FROM pedidos ${where} ORDER BY creado_en, id`).all(valores);
       return filas.map(pedidoADominio);
+    },
+    franjasConsumidasHoy(huespedId) {
+      return franjasConsumidasHoyStmt.all({ huespedId }).map((fila) => fila.franja);
     },
   };
 }
