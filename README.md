@@ -26,9 +26,9 @@ reemplaza sin tocar el resto del código.
 **Todavía no existe**: validación de derecho de comidas, descuento
 automático de inventario y caja diaria — son de la otra persona del
 equipo. Tampoco hay frontend funcional (las páginas por rol siguen siendo
-placeholder). Ver `docs/decisiones.md` para el reparto completo y
-`docs/superpowers/specs/2026-08-04-maquina-estados-comanda-design.md`
-para el contrato exacto de los puntos de enganche.
+placeholder). Ver `docs/decisiones.md` para el reparto completo y el
+contrato exacto de los puntos de enganche con inventario/derecho de
+comidas.
 
 ## Cómo arrancar
 

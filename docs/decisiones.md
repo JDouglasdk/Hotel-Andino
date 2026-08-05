@@ -109,10 +109,24 @@ Solo una persona del equipo conoce el código de `restaurante-app` a fondo
   `inventarioServicio.descontarPorPedido({items})` — ahora mismo apuntan
   a un placeholder en `backend/src/contenedor.js` (permite todo). Solo
   hay que reemplazar ese registro con la implementación real, respetando
-  la misma firma; `pedidosServicio` no se toca. Ver
-  `docs/superpowers/specs/2026-08-04-maquina-estados-comanda-design.md`
-  para el detalle completo del contrato — ver la sección "Detalles que
-  el contrato no cubre todavía" antes de implementar.
+  la misma firma; `pedidosServicio` no se toca.
+
+  **Detalles del contrato que todavía no cubre** (leer antes de
+  implementar):
+  - Un `throw` de `descontarPorPedido` no revierte el pedido — ya se hizo
+    commit de la transacción del pedido antes de llamar a este hook, así
+    que si el descuento de inventario falla, el pedido queda persistido
+    igual (en estado `pendiente`) sin haber descontado nada.
+  - Cancelar un pedido no reintegra inventario — ninguna transición de
+    estado, incluida `cancelado`, vuelve a llamar a `inventarioServicio`.
+    No existe un hook tipo `reintegrarPorPedido`; si hace falta, es pieza
+    aparte de quien construya inventario.
+  - `items` no viene deduplicado por `platoId` — dos líneas con el mismo
+    plato llegan como dos entradas separadas, no una sola sumada.
+  - `pedidosRepositorio` todavía no tiene forma de consultar por huésped
+    ni de contar franjas ya consumidas en el día — quien implemente
+    `validarDerecho` va a necesitar agregar su propia manera de leer esos
+    datos (método nuevo en `pedidosRepositorio` o repositorio propio).
 - **La otra persona**: construye las piezas 100% nuevas, que no requieren
   conocer `restaurante-app` — validación de derecho de comidas, descuento
   de inventario, caja diaria. Ver ticket en GitHub Issues del repo.
