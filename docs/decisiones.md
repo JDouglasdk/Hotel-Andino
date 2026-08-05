@@ -122,6 +122,16 @@ si el descuento falla (stock insuficiente), el pedido queda persistido en
 `pendiente` sin inventario descontado. Comportamiento conocido, no
 resuelto en este plan.
 
+Cancelar un pedido tampoco reintegra el inventario que ya se descontó al
+crearlo — ninguna transición de estado, incluida `cancelado`, vuelve a
+llamar a `inventarioServicio`. Combinado con lo anterior: un pedido cuyo
+descuento de inventario falla (stock insuficiente) sigue contando contra
+el límite diario de comidas del huésped, aunque nunca se haya podido
+preparar — cancelarlo libera esa franja otra vez, pero hay que hacerlo a
+mano. Un ciclo crear-y-cancelar, por su parte, drena inventario sin dejar
+rastro de consumo real. Comportamiento conocido, no resuelto en este
+plan.
+
 Trabajar en ramas separadas, fusionar seguido para evitar choques.
 
 ## Supuestos marcados (confirmar si algo cambia)

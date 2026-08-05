@@ -28,7 +28,10 @@ const esquemaReemplazarReceta = z.object({
   items: z.array(z.object({
     ingredienteId: z.coerce.number().int().positive(),
     cantidadRequerida: z.number().positive(),
-  })).min(1),
+  })).min(1).refine(
+    (items) => new Set(items.map((item) => item.ingredienteId)).size === items.length,
+    { message: 'No se puede repetir un ingredienteId en la receta' },
+  ),
 }).strict();
 
 module.exports = {

@@ -14,21 +14,17 @@ mismo patrón que `restaurante-app`, reciclado donde aplica.
 
 ## Estado actual
 
-Cimientos + módulo de autenticación/usuarios, módulo de menú
-(categorías/platos), módulo de huéspedes y la máquina de estados de
-comanda (pedidos: crear con validación de huésped/plato/disponibilidad,
-transición de estado por rol, cancelación) completos y probados —
-55 tests de integración en verde. `pedidosServicio` ya deja el enganche
-listo para las dos piezas que faltan (validación de derecho de comidas y
-descuento de inventario), vía un placeholder en `contenedor.js` que se
-reemplaza sin tocar el resto del código.
+Núcleo completo del reto construido y probado: cimientos + módulo de
+autenticación/usuarios, módulo de menú (categorías/platos), módulo de
+huéspedes, la máquina de estados de comanda (pedidos: crear con
+validación de huésped/plato/disponibilidad, transición de estado por rol,
+cancelación), ingredientes/recetas, validación real de derecho de
+comidas, descuento automático de inventario y caja diaria — 77 tests de
+integración en verde.
 
-**Todavía no existe**: validación de derecho de comidas, descuento
-automático de inventario y caja diaria — son de la otra persona del
-equipo. Tampoco hay frontend funcional (las páginas por rol siguen siendo
-placeholder). Ver `docs/decisiones.md` para el reparto completo y el
-contrato exacto de los puntos de enganche con inventario/derecho de
-comidas.
+**Todavía no existe**: frontend funcional (las páginas por rol siguen
+siendo placeholder). Ver `docs/decisiones.md` para el reparto completo y
+los detalles de la decisión.
 
 ## Cómo arrancar
 
@@ -54,7 +50,8 @@ cd backend && npm test
 cd frontend && npm test
 ```
 
-Mismo formato en ambos (`node --test`). Backend: 55 tests de integración
-en verde (auth/usuarios, menú, huéspedes, pedidos). Frontend: sin tests
-propios todavía — no hay funcionalidad real que probar hasta que se
-construya la interfaz.
+Mismo formato en ambos (`node --test`). Backend: 77 tests de integración
+en verde (auth/usuarios, menú, huéspedes, pedidos, ingredientes/recetas,
+derecho de comidas, inventario, caja diaria). Frontend: sin tests propios
+todavía — no hay funcionalidad real que probar hasta que se construya la
+interfaz.

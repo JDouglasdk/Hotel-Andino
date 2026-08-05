@@ -172,6 +172,24 @@ test('reemplazar receta con ingrediente inexistente responde 404', async () => {
   assert.equal(respuesta.body.error.codigo, 'INGREDIENTE_NO_ENCONTRADO');
 });
 
+test('reemplazar receta con ingredienteId repetido responde 422', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const categoria = await crearCategoria(agente, 'Entradas');
+  const plato = await agente.post('/api/platos').send({ categoriaId: categoria.id, nombre: 'Empanadas', precio: 8000 });
+  const ingrediente = await agente.post('/api/ingredientes').send({ nombre: 'Harina', cantidadStock: 100, unidadMedida: 'kg' });
+
+  const respuesta = await agente.post(`/api/platos/${plato.body.id}/receta`).send({
+    items: [
+      { ingredienteId: ingrediente.body.id, cantidadRequerida: 1 },
+      { ingredienteId: ingrediente.body.id, cantidadRequerida: 2 },
+    ],
+  });
+
+  assert.equal(respuesta.status, 422);
+  assert.equal(respuesta.body.error.codigo, 'DATOS_INVALIDOS');
+});
+
 test('reemplazar la receta dos veces deja solo la última versión', async () => {
   const { app } = crearAppDePrueba();
   const agente = await iniciarSesionAdmin(app);
