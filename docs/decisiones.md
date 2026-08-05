@@ -96,12 +96,22 @@ Solo una persona del equipo conoce el código de `restaurante-app` a fondo
 (lo construyó). Por eso:
 
 - **Esa persona**: adapta/recicla lo que ya existe — login, menú, máquina
-  de estados de comanda. **Ya hecho: módulo de autenticación/usuarios**
-  (login, sesión, rate limiting, CRUD de usuarios por rol) **y módulo de
-  menú** (categorías y platos, CRUD completo con filtros de disponibilidad
-  y categoría) — 32 tests de integración en verde. Ver
+  de estados de comanda. **Ya hecho: módulo de autenticación/usuarios**,
+  **módulo de menú** (categorías y platos) **y módulo de huéspedes +
+  máquina de estados de comanda** (pedidos: crear con validación de
+  huésped/plato/disponibilidad, transición de estado con rol por
+  transición, cancelación) — 52 tests de integración en verde. Ver
   `backend/src/{modelos,servicios,controladores,rutas}` y
-  `backend/tests/integracion/`. Sigue: máquina de estados de comanda.
+  `backend/tests/integracion/`.
+  **Contrato listo para la otra persona**: `pedidosServicio` (en
+  `backend/src/servicios/pedidosServicio.js`) ya llama
+  `derechoDeComidasServicio.validarDerecho({huespedId, franja})` e
+  `inventarioServicio.descontarPorPedido({items})` — ahora mismo apuntan
+  a un placeholder en `backend/src/contenedor.js` (permite todo). Solo
+  hay que reemplazar ese registro con la implementación real, respetando
+  la misma firma; `pedidosServicio` no se toca. Ver
+  `docs/superpowers/specs/2026-08-04-maquina-estados-comanda-design.md`
+  para el detalle completo del contrato.
 - **La otra persona**: construye las piezas 100% nuevas, que no requieren
   conocer `restaurante-app` — validación de derecho de comidas, descuento
   de inventario, caja diaria. Ver ticket en GitHub Issues del repo.
