@@ -97,10 +97,11 @@ Solo una persona del equipo conoce el código de `restaurante-app` a fondo
 
 - **Esa persona**: adapta/recicla lo que ya existe — login, menú, máquina
   de estados de comanda. **Ya hecho: módulo de autenticación/usuarios**
-  (login, sesión, rate limiting, CRUD de usuarios por rol, 16 tests en
-  verde) — ver `backend/src/{modelos,servicios,controladores,rutas}` y
-  `backend/tests/integracion/{autenticacionRutas,usuariosRutas}.test.js`.
-  Sigue: menú (categorías/platos) y máquina de estados de comanda.
+  (login, sesión, rate limiting, CRUD de usuarios por rol) **y módulo de
+  menú** (categorías y platos, CRUD completo con filtros de disponibilidad
+  y categoría) — 32 tests de integración en verde. Ver
+  `backend/src/{modelos,servicios,controladores,rutas}` y
+  `backend/tests/integracion/`. Sigue: máquina de estados de comanda.
 - **La otra persona**: construye las piezas 100% nuevas, que no requieren
   conocer `restaurante-app` — validación de derecho de comidas, descuento
   de inventario, caja diaria. Ver ticket en GitHub Issues del repo.
