@@ -34,6 +34,14 @@ window.Comun = window.Comun || {};
     return '$' + monto.toLocaleString('es-CO');
   }
 
+  // Redondea a 2 decimales — evita artefactos de punto flotante como
+  // "27.9000000000000002" al restar cantidades sucesivas en el backend.
+  function formatearCantidad(valor) {
+    const numero = Number(valor);
+    if (!Number.isFinite(numero)) return String(valor);
+    return numero.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+  }
+
   function crearTextoVacio(texto) {
     const parrafo = document.createElement('p');
     parrafo.className = 'texto-vacio';
@@ -141,7 +149,7 @@ window.Comun = window.Comun || {};
 
     const filas = ingredientes.map((ingrediente) => [
       ingrediente.nombre,
-      String(ingrediente.cantidadStock),
+      formatearCantidad(ingrediente.cantidadStock),
       ingrediente.unidadMedida,
     ]);
     contenedor.append(crearTabla(['Ingrediente', 'Cantidad en stock', 'Unidad de medida'], filas));

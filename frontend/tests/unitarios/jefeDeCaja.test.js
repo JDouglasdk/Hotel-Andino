@@ -181,6 +181,23 @@ test('sin pedidos entregados hoy muestra el aviso de vacío y el total en cero',
   assert.match(textoDe(dom, '#contenido-platos-por-franja .texto-vacio'), /todavía no hay platos servidos/i);
 });
 
+test('la cantidad en stock se redondea a 2 decimales, sin artefactos de punto flotante', async () => {
+  const respuestas = respuestasPorDefecto();
+  respuestas['/api/ingredientes'] = () => respuestaOk([
+    { id: 1, nombre: 'Papa', cantidadStock: 27.9000000000000002, unidadMedida: 'kg', actualizadoEn: '2026-08-05T10:00:00.000Z' },
+    { id: 2, nombre: 'Arroz', cantidadStock: 49.5, unidadMedida: 'kg', actualizadoEn: '2026-08-05T10:00:00.000Z' },
+    { id: 3, nombre: 'Sal', cantidadStock: 10, unidadMedida: 'kg', actualizadoEn: '2026-08-05T10:00:00.000Z' },
+  ]);
+  const { dom } = montarPanel(respuestas);
+
+  await esperarCarga(dom);
+
+  assert.deepEqual(
+    filasDe(dom, '#contenido-inventario'),
+    [['Papa', '27.9', 'kg'], ['Arroz', '49.5', 'kg'], ['Sal', '10', 'kg']],
+  );
+});
+
 test('el botón "Actualizar" vuelve a pedir los reportes y refresca los datos', async () => {
   const respuestas = respuestasPorDefecto();
   let totalActual = 1000;
