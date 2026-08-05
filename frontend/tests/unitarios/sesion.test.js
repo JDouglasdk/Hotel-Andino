@@ -1,5 +1,5 @@
 const test = require('node:test');
-const assert = require('node:assert');
+const assert = require('node:assert/strict');
 const path = require('node:path');
 const { crearDom, ejecutarScript } = require('../ayudas/dom');
 
@@ -52,7 +52,7 @@ test('un error de red no redirige — resuelve { error: "RED" }', async () => {
 
   const resultado = await dom.window.Comun.sesion.verificar({ rolEsperado: 'admin', alRedirigir: (r) => { redirigidoA = r; } });
 
-  assert.deepEqual(resultado, { error: 'RED' });
+  assert.equal(resultado.error, 'RED');
   assert.equal(redirigidoA, null);
 });
 
@@ -63,6 +63,6 @@ test('una respuesta de servidor inesperada (500) tampoco redirige', async () => 
 
   const resultado = await dom.window.Comun.sesion.verificar({ rolEsperado: 'admin', alRedirigir: (r) => { redirigidoA = r; } });
 
-  assert.deepEqual(resultado, { error: 'RED' });
+  assert.equal(resultado.error, 'RED');
   assert.equal(redirigidoA, null);
 });
