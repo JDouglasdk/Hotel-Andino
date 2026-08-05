@@ -17,10 +17,40 @@
     <button type="button" id="boton-reintentar-sesion" class="boton boton--secundario">Reintentar</button>
   </div>
 
-  <main id="contenido-panel" hidden>
+  <main id="contenido-panel" class="panel" hidden>
     <h1>Panel mesero</h1>
-    <p>Placeholder. Pendiente: identificar huésped por documento, validar
-      derecho de comidas y registrar comanda.</p>
+
+    <section class="seccion-panel">
+      <h2>Identificar huésped</h2>
+      <form id="formulario-buscar-huesped" class="formulario">
+        <div class="campo">
+          <label for="documento-huesped">Documento del huésped</label>
+          <input type="text" id="documento-huesped" name="documento" autocomplete="off">
+        </div>
+        <button type="submit" id="boton-buscar-huesped" class="boton boton--primario">Buscar</button>
+      </form>
+      <p id="error-huesped" class="banner-error" hidden></p>
+      <div id="resultado-huesped" class="tarjeta-huesped" hidden></div>
+    </section>
+
+    <section id="seccion-comanda" class="seccion-panel" hidden>
+      <h2>Registrar comanda</h2>
+      <form id="formulario-comanda" class="formulario">
+        <div class="campo">
+          <label for="franja-comanda">Franja</label>
+          <select id="franja-comanda" name="franja">
+            <option value="desayuno">Desayuno</option>
+            <option value="almuerzo">Almuerzo</option>
+            <option value="cena">Cena</option>
+          </select>
+        </div>
+        <p id="mensaje-platos" hidden></p>
+        <div id="lista-platos" class="lista-platos"></div>
+        <button type="submit" id="boton-registrar-comanda" class="boton boton--primario">Registrar comanda</button>
+      </form>
+      <p id="error-comanda" class="banner-error" hidden></p>
+      <p id="exito-comanda" class="banner-exito" hidden></p>
+    </section>
   </main>
 
   <script src="/js/comun/dialogo.js" defer></script>

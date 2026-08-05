@@ -127,6 +127,89 @@
   padding: var(--espacio-2) var(--espacio-3);
 }
 
+.banner-error--destacado {
+  border-left: 4px solid var(--color-error);
+  font-weight: 600;
+}
+
+.panel {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--espacio-4);
+}
+
+.seccion-panel {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-base);
+  padding: var(--espacio-4);
+  margin-bottom: var(--espacio-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.campo select {
+  padding: var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: #FFFFFF;
+  font-size: 1rem;
+}
+
+.tarjeta-huesped {
+  background: var(--color-fondo);
+  border-radius: var(--radio-base);
+  padding: var(--espacio-3);
+}
+
+.huesped-nombre {
+  font-weight: 600;
+  margin: 0 0 var(--espacio-1);
+}
+
+.huesped-documento,
+.huesped-tipo {
+  margin: 0;
+  color: var(--color-texto-secundario);
+  font-size: 0.9rem;
+}
+
+.lista-platos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.plato-fila {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-2) 0;
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.plato-nombre {
+  flex: 1;
+}
+
+.plato-precio {
+  color: var(--color-texto-secundario);
+}
+
+.plato-etiqueta-cantidad {
+  font-size: 0.85rem;
+  color: var(--color-texto-secundario);
+}
+
+.plato-cantidad {
+  width: 4.5rem;
+  padding: var(--espacio-1) var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-base);
+  font-size: 1rem;
+}
+
 .dialogo-overlay {
   position: fixed;
   inset: 0;
