@@ -11,11 +11,7 @@ window.Comun.clienteApi = {
     }
 
     if (respuesta.status === 401) {
-      window.Comun.dialogo.abrir({
-        mensaje: 'Tu sesión venció. Ingresa de nuevo.',
-        textoConfirmar: 'Entendido',
-        alConfirmar: () => alRedirigir('/login'),
-      });
+      alRedirigir('/login');
       throw { tipo: 'SESION_EXPIRADA' };
     }
 
@@ -30,6 +26,15 @@ window.Comun.clienteApi = {
     }
 
     if (respuesta.status === 204) return null;
-    return respuesta.json();
+    try {
+      return await respuesta.json();
+    } catch {
+      throw {
+        tipo: 'NEGOCIO',
+        status: respuesta.status,
+        codigo: undefined,
+        mensaje: undefined,
+      };
+    }
   },
 };

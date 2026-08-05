@@ -37,7 +37,7 @@ test('una respuesta exitosa resuelve con el cuerpo JSON', async () => {
   assert.deepEqual(resultado, { id: 1 });
 });
 
-test('un 401 abre dialogo.js con aviso de sesión vencida y rechaza sin redirigir hasta confirmar', async () => {
+test('un 401 rechaza SESION_EXPIRADA e inmediatamente redirige (sin dialog dismissible)', async () => {
   const dom = crearDomConClienteApi();
   dom.window.fetch = async () => ({ status: 401, ok: false, json: async () => ({}) });
 
@@ -47,12 +47,7 @@ test('un 401 abre dialogo.js con aviso de sesión vencida y rechaza sin redirigi
     (error) => { assert.equal(error.tipo, 'SESION_EXPIRADA'); return true; }
   );
 
-  assert.equal(redirigidoA, null, 'no debe redirigir antes de confirmar');
-  const mensaje = dom.window.document.querySelector('.dialogo-mensaje');
-  assert.match(mensaje.textContent, /sesión venció/i);
-
-  dom.window.document.querySelector('.dialogo-confirmar').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
-  assert.equal(redirigidoA, '/login');
+  assert.equal(redirigidoA, '/login', 'debe redirigir inmediatamente sin permitir dismissal');
 });
 
 test('una respuesta de error de negocio rechaza con status/codigo/mensaje del backend', async () => {
@@ -82,5 +77,25 @@ test('un error de red (fetch rechaza) se distingue de un error de negocio', asyn
   await assert.rejects(
     () => dom.window.Comun.clienteApi.peticion('/api/ingredientes'),
     (error) => { assert.equal(error.tipo, 'RED'); return true; }
+  );
+});
+
+test('un JSON malformado en respuesta 2xx rechaza con tipo NEGOCIO (no SyntaxError)', async () => {
+  const dom = crearDomConClienteApi();
+  dom.window.fetch = async () => ({
+    status: 200,
+    ok: true,
+    json: async () => { throw new SyntaxError('JSON.parse error'); },
+  });
+
+  await assert.rejects(
+    () => dom.window.Comun.clienteApi.peticion('/api/ingredientes'),
+    (error) => {
+      assert.equal(error.tipo, 'NEGOCIO');
+      assert.equal(error.status, 200);
+      assert.equal(error.codigo, undefined);
+      assert.equal(error.mensaje, undefined);
+      return true;
+    }
   );
 });
