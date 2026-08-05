@@ -324,6 +324,32 @@ test('vip puede pedir en sus 3 franjas distintas el mismo día', async () => {
   }
 });
 
+test('vip puede repetir una franja ya usada incluso después de agotar sus 3 franjas', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '999999', nombreCompleto: 'Sofia Vip', tipoHuesped: 'vip' });
+  const categoria = await adminAgente.post('/api/categorias').send({ nombre: 'Entradas' });
+  const plato = await adminAgente.post('/api/platos').send({ categoriaId: categoria.body.id, nombre: 'Sopa', precio: 5000 });
+  const ingrediente = await adminAgente.post('/api/ingredientes').send({ nombre: 'Verdura', cantidadStock: 1000, unidadMedida: 'kg' });
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 1 }] });
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  for (const franja of ['desayuno', 'almuerzo', 'cena']) {
+    const respuesta = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja, items: [{ platoId: plato.body.id, cantidad: 1 }] });
+    assert.equal(respuesta.status, 201);
+  }
+
+  // Las 3 franjas ya están usadas hoy. Repetir 'desayuno' NO debe bloquearse
+  // — repetir una franja nunca cuenta contra el límite, sin excepción,
+  // incluso cuando ya no queda ninguna franja nueva por usar. Este es el
+  // caso exacto que motivó simplificar la regla en derechoDeComidasServicio
+  // (se descartó un chequeo redundante que bloqueaba todo una vez usadas
+  // las 3 franjas — ver docs/superpowers/specs/2026-08-04-inventario-derecho-comidas-reportes-design.md).
+  const respuesta = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'desayuno', items: [{ platoId: plato.body.id, cantidad: 1 }] });
+
+  assert.equal(respuesta.status, 201);
+});
+
 test('cancelar un pedido libera esa franja para el límite de comidas', async () => {
   const { app, contenedor } = crearAppDePrueba();
   const adminAgente = await iniciarSesionAdmin(app);
