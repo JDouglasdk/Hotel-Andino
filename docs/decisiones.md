@@ -90,46 +90,37 @@ cómo se ejecuten esas pruebas.
 - Sin credenciales ni secretos en el repositorio — todo vía `.env`
   (`.env` está en `.gitignore`, solo se versiona `.env.example`).
 
-## Reparto de trabajo
+## Reparto de trabajo — estado final
 
-Solo una persona del equipo conoce el código de `restaurante-app` a fondo
-(lo construyó). Por eso:
+El núcleo completo del reto (ítems 1-8 de "Alcance decidido" arriba) está
+construido y probado en `main`: autenticación/usuarios, menú
+(categorías/platos), huéspedes, la máquina de estados de comanda,
+ingredientes/recetas, validación real de derecho de comidas, descuento de
+inventario y caja diaria — 77 tests de integración en verde. Ver
+`backend/src/{modelos,servicios,controladores,rutas}` y
+`backend/tests/integracion/`.
 
-- **Esa persona**: adapta/recicla lo que ya existe — login, menú, máquina
-  de estados de comanda. **Ya hecho: módulo de autenticación/usuarios**,
-  **módulo de menú** (categorías y platos) **y módulo de huéspedes +
-  máquina de estados de comanda** (pedidos: crear con validación de
-  huésped/plato/disponibilidad, transición de estado con rol por
-  transición, cancelación) — 52 tests de integración en verde. Ver
-  `backend/src/{modelos,servicios,controladores,rutas}` y
-  `backend/tests/integracion/`.
-  **Contrato listo para la otra persona**: `pedidosServicio` (en
-  `backend/src/servicios/pedidosServicio.js`) ya llama
-  `derechoDeComidasServicio.validarDerecho({huespedId, franja})` e
-  `inventarioServicio.descontarPorPedido({items})` — ahora mismo apuntan
-  a un placeholder en `backend/src/contenedor.js` (permite todo). Solo
-  hay que reemplazar ese registro con la implementación real, respetando
-  la misma firma; `pedidosServicio` no se toca.
+**Nota sobre la rama `feature/derecho-comidas-inventario`**: la otra
+persona del equipo entregó esa parte del ticket, pero como una reescritura
+casi completa del backend (no solo derecho de comidas/inventario/caja) —
+partió aparentemente de una copia del proyecto anterior a que se
+fusionaran menú/huéspedes/pedidos, con 39 de sus 77 tests fallando contra
+su propio código, sin el rate limiting de login (marcado no negociable
+arriba), sin el endpoint de disponibilidad de platos, y sin el permiso
+granular por transición de la máquina de estados. Se decidió **no
+fusionar esa rama**. Se rescató la lógica de negocio genuinamente nueva y
+correcta que contenía (`ingredientesServicio`, `ingredientesRepositorio`,
+`recetasRepositorio`, y la regla de derecho de comidas) y se reimplementó
+sobre `main`, siguiendo las convenciones ya establecidas — ver
+`docs/superpowers/specs/2026-08-04-inventario-derecho-comidas-reportes-design.md`
+(local, no versionado) para el detalle completo de esa decisión.
 
-  **Detalles del contrato que todavía no cubre** (leer antes de
-  implementar):
-  - Un `throw` de `descontarPorPedido` no revierte el pedido — ya se hizo
-    commit de la transacción del pedido antes de llamar a este hook, así
-    que si el descuento de inventario falla, el pedido queda persistido
-    igual (en estado `pendiente`) sin haber descontado nada.
-  - Cancelar un pedido no reintegra inventario — ninguna transición de
-    estado, incluida `cancelado`, vuelve a llamar a `inventarioServicio`.
-    No existe un hook tipo `reintegrarPorPedido`; si hace falta, es pieza
-    aparte de quien construya inventario.
-  - `items` no viene deduplicado por `platoId` — dos líneas con el mismo
-    plato llegan como dos entradas separadas, no una sola sumada.
-  - `pedidosRepositorio` todavía no tiene forma de consultar por huésped
-    ni de contar franjas ya consumidas en el día — quien implemente
-    `validarDerecho` va a necesitar agregar su propia manera de leer esos
-    datos (método nuevo en `pedidosRepositorio` o repositorio propio).
-- **La otra persona**: construye las piezas 100% nuevas, que no requieren
-  conocer `restaurante-app` — validación de derecho de comidas, descuento
-  de inventario, caja diaria. Ver ticket en GitHub Issues del repo.
+Límite de inventario descontado al confirmar comanda: `descontarPorPedido`
+corre en una sola transacción sobre todos los ítems del pedido, pero
+**después** de que `pedidosRepositorio.crear` ya hizo commit del pedido —
+si el descuento falla (stock insuficiente), el pedido queda persistido en
+`pendiente` sin inventario descontado. Comportamiento conocido, no
+resuelto en este plan.
 
 Trabajar en ramas separadas, fusionar seguido para evitar choques.
 
