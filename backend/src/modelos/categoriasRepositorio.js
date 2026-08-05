@@ -2,8 +2,8 @@ function crearCategoriasRepositorio(conexion) {
   const insertar = conexion.prepare('INSERT INTO categorias (nombre) VALUES (@nombre)');
   const actualizar = conexion.prepare('UPDATE categorias SET nombre = @nombre WHERE id = @id');
   const buscarPorIdStmt = conexion.prepare('SELECT * FROM categorias WHERE id = ?');
-  const buscarPorNombreStmt = conexion.prepare('SELECT * FROM categorias WHERE nombre = ?');
-  const listarTodasStmt = conexion.prepare('SELECT * FROM categorias ORDER BY nombre');
+  const buscarPorNombreStmt = conexion.prepare('SELECT * FROM categorias WHERE nombre = ? COLLATE NOCASE');
+  const listarTodasStmt = conexion.prepare('SELECT * FROM categorias ORDER BY nombre COLLATE NOCASE');
 
   function aDominio(fila) {
     if (!fila) return null;

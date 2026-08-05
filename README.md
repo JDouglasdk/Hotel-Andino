@@ -14,10 +14,11 @@ mismo patrón que `restaurante-app`, reciclado donde aplica.
 
 ## Estado actual
 
-Cimientos + módulo de autenticación/usuarios completo y probado (login,
+Cimientos + módulo de autenticación/usuarios y módulo de menú
+(categorías/platos, CRUD restringido a admin) completos y probados (login,
 sesión, rate limiting en login, CRUD de usuarios restringido a admin,
-16 tests de integración en verde). **El resto de la lógica de negocio
-(huéspedes, menú, comandas, inventario, caja) todavía no existe** — son
+33 tests de integración en verde). **El resto de la lógica de negocio
+(huéspedes, comandas, inventario, caja) todavía no existe** — son
 solo páginas placeholder por rol. Ver `docs/decisiones.md` para qué falta
 y quién lo construye.
 

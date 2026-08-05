@@ -42,6 +42,20 @@ test('crear una categoría con nombre duplicado responde 409', async () => {
   assert.equal(respuesta.body.error.codigo, 'CATEGORIA_DUPLICADA');
 });
 
+test('crear una categoría con nombre duplicado por mayúsculas o espacios responde 409', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  await agente.post('/api/categorias').send({ nombre: 'Entradas' });
+
+  const porMayusculas = await agente.post('/api/categorias').send({ nombre: 'entradas' });
+  const porEspacios = await agente.post('/api/categorias').send({ nombre: '  Entradas  ' });
+
+  assert.equal(porMayusculas.status, 409);
+  assert.equal(porMayusculas.body.error.codigo, 'CATEGORIA_DUPLICADA');
+  assert.equal(porEspacios.status, 409);
+  assert.equal(porEspacios.body.error.codigo, 'CATEGORIA_DUPLICADA');
+});
+
 test('crear una categoría con nombre vacío responde 422', async () => {
   const { app } = crearAppDePrueba();
   const agente = await iniciarSesionAdmin(app);
