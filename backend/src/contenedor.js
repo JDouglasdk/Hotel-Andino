@@ -3,27 +3,24 @@
 // BD, cada servicio recibe los repositorios (y otros servicios) que necesita
 // por parámetro — nunca hace `require` directo de un repositorio. Así la
 // lógica de negocio en servicios/ no depende de cómo se conecta a SQLite.
-//
-// El módulo que falta (ingredientes) se agrega aquí siguiendo el mismo
-// patrón: repositorio primero, servicio después, registrar ambos abajo.
 
 const { crearUsuariosRepositorio } = require('./modelos/usuariosRepositorio');
 const { crearCategoriasRepositorio } = require('./modelos/categoriasRepositorio');
 const { crearPlatosRepositorio } = require('./modelos/platosRepositorio');
 const { crearHuespedesRepositorio } = require('./modelos/huespedesRepositorio');
 const { crearPedidosRepositorio } = require('./modelos/pedidosRepositorio');
+const { crearIngredientesRepositorio } = require('./modelos/ingredientesRepositorio');
 const { crearAutenticacionServicio } = require('./servicios/autenticacionServicio');
 const { crearUsuariosServicio } = require('./servicios/usuariosServicio');
 const { crearCategoriasServicio } = require('./servicios/categoriasServicio');
 const { crearPlatosServicio } = require('./servicios/platosServicio');
 const { crearHuespedesServicio } = require('./servicios/huespedesServicio');
 const { crearPedidosServicio } = require('./servicios/pedidosServicio');
+const { crearIngredientesServicio } = require('./servicios/ingredientesServicio');
 
-// TODO(compañero): reemplazar estos dos placeholders con la implementación
-// real de derecho de comidas / descuento de inventario cuando existan — ver
-// docs/superpowers/specs/2026-08-04-maquina-estados-comanda-design.md para
-// la interfaz exacta. Solo hay que cambiar este registro, pedidosServicio
-// no cambia.
+// TODO: reemplazar estos dos placeholders con la implementación real de
+// derecho de comidas / descuento de inventario (Task 3 de
+// docs/superpowers/plans/2026-08-04-inventario-derecho-comidas-reportes.md).
 const derechoDeComidasServicioPlaceholder = {
   validarDerecho() {}, // permite todo
 };
@@ -38,6 +35,7 @@ function crearContenedor(conexion) {
     platosRepositorio: crearPlatosRepositorio(conexion),
     huespedesRepositorio: crearHuespedesRepositorio(conexion),
     pedidosRepositorio: crearPedidosRepositorio(conexion),
+    ingredientesRepositorio: crearIngredientesRepositorio(conexion),
   };
 
   const autenticacionServicio = crearAutenticacionServicio({ usuariosRepositorio: repositorios.usuariosRepositorio });
@@ -57,6 +55,9 @@ function crearContenedor(conexion) {
     }),
     huespedesServicio: crearHuespedesServicio({
       huespedesRepositorio: repositorios.huespedesRepositorio,
+    }),
+    ingredientesServicio: crearIngredientesServicio({
+      ingredientesRepositorio: repositorios.ingredientesRepositorio,
     }),
     pedidosServicio: crearPedidosServicio({
       pedidosRepositorio: repositorios.pedidosRepositorio,

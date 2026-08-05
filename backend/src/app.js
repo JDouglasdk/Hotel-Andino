@@ -20,6 +20,8 @@ const { crearHuespedesControlador } = require('./controladores/huespedesControla
 const { crearRutasHuespedes } = require('./rutas/huespedes');
 const { crearPedidosControlador } = require('./controladores/pedidosControlador');
 const { crearRutasPedidos } = require('./rutas/pedidos');
+const { crearIngredientesControlador } = require('./controladores/ingredientesControlador');
+const { crearRutasIngredientes } = require('./rutas/ingredientes');
 
 function crearApp(contenedor, { rutaSesionesDb } = {}) {
   const app = express();
@@ -53,12 +55,12 @@ function crearApp(contenedor, { rutaSesionesDb } = {}) {
   const pedidosControlador = crearPedidosControlador({ pedidosServicio: contenedor.servicios.pedidosServicio });
   app.use('/api/pedidos', crearRutasPedidos({ controlador: pedidosControlador, requiereSesion }));
 
+  const ingredientesControlador = crearIngredientesControlador({ ingredientesServicio: contenedor.servicios.ingredientesServicio });
+  app.use('/api/ingredientes', crearRutasIngredientes({ controlador: ingredientesControlador, requiereSesion }));
+
   // ---------------------------------------------------------------------
-  // Rutas de negocio que faltan (ver docs/decisiones.md — reparto entre
-  // las dos personas del equipo):
-  //
-  //   app.use('/api/ingredientes', crearRutasIngredientes({ ... }));
-  //   app.use('/api/reportes', crearRutasReportes({ ... })); // incluye caja diaria
+  // Ruta que falta: /api/reportes (Task 4 de
+  // docs/superpowers/plans/2026-08-04-inventario-derecho-comidas-reportes.md)
   // ---------------------------------------------------------------------
 
   const publicDir = path.join(__dirname, '../../frontend/public');
