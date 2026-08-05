@@ -60,6 +60,29 @@ test('si sesion.verificar devuelve error de red, muestra el estado de error (no 
   assert.equal(llamadasHeader.length, 0);
 });
 
+test('alListo se llama una sola vez con el usuario, cuando el contenido se muestra', async () => {
+  const usuario = { nombreCompleto: 'Ana', rol: 'admin' };
+  const { dom } = crearDomConPanelStubs({ resultadoVerificar: usuario });
+  const llamadasAlListo = [];
+
+  await dom.window.Comun.panel.inicializar({ rolEsperado: 'admin', alListo: (u) => llamadasAlListo.push(u) });
+
+  assert.equal(llamadasAlListo.length, 1);
+  assert.deepEqual(llamadasAlListo[0], usuario);
+});
+
+test('alListo no se llama si sesion.verificar redirigió o dio error de red', async () => {
+  const { dom: domRedirigido } = crearDomConPanelStubs({ resultadoVerificar: null });
+  const llamadasRedirigido = [];
+  await domRedirigido.window.Comun.panel.inicializar({ rolEsperado: 'admin', alListo: (u) => llamadasRedirigido.push(u) });
+  assert.equal(llamadasRedirigido.length, 0);
+
+  const { dom: domError } = crearDomConPanelStubs({ resultadoVerificar: { error: 'RED' } });
+  const llamadasError = [];
+  await domError.window.Comun.panel.inicializar({ rolEsperado: 'admin', alListo: (u) => llamadasError.push(u) });
+  assert.equal(llamadasError.length, 0);
+});
+
 test('el botón "Reintentar" vuelve a llamar a sesion.verificar y puede recuperarse', async () => {
   const usuario = { nombreCompleto: 'Ana', rol: 'admin' };
   const { dom, contarVerificar } = crearDomConPanelStubs({

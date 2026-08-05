@@ -1,7 +1,9 @@
 window.Comun = window.Comun || {};
 
 window.Comun.panel = {
-  inicializar({ rolEsperado, documento = document }) {
+  inicializar({ rolEsperado, documento = document, alListo }) {
+    let yaInicializoContenido = false;
+
     function mostrarError() {
       documento.getElementById('estado-carga').hidden = true;
       documento.getElementById('estado-error-sesion').hidden = false;
@@ -16,6 +18,13 @@ window.Comun.panel = {
         usuario,
       });
       documento.getElementById('contenido-panel').hidden = false;
+      // El "Reintentar" puede volver a llamar a cargar() tras un éxito
+      // previo (p.ej. si el usuario lo pulsa de más) — alListo solo debe
+      // correr una vez, para no duplicar la UI de negocio del panel.
+      if (alListo && !yaInicializoContenido) {
+        yaInicializoContenido = true;
+        alListo(usuario);
+      }
     }
 
     async function cargar() {
