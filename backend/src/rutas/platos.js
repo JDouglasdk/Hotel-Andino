@@ -7,6 +7,7 @@ const {
   esquemaActualizarPlato,
   esquemaCambiarDisponibilidadPlato,
   esquemaFiltrarPlatos,
+  esquemaReemplazarReceta,
 } = require('../esquemas/platosEsquemas');
 
 function crearRutasPlatos({ controlador, requiereSesion }) {
@@ -17,6 +18,7 @@ function crearRutasPlatos({ controlador, requiereSesion }) {
   router.post('/', requiereSesion, requiereAdmin, validar({ cuerpo: esquemaCrearPlato }), controlador.crear);
   router.put('/:id', requiereSesion, requiereAdmin, validar({ parametros: esquemaIdParametro, cuerpo: esquemaActualizarPlato }), controlador.actualizar);
   router.patch('/:id/disponibilidad', requiereSesion, requiereAdmin, validar({ parametros: esquemaIdParametro, cuerpo: esquemaCambiarDisponibilidadPlato }), controlador.cambiarDisponibilidad);
+  router.post('/:id/receta', requiereSesion, requiereAdmin, validar({ parametros: esquemaIdParametro, cuerpo: esquemaReemplazarReceta }), controlador.reemplazarReceta);
 
   return router;
 }

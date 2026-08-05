@@ -1,6 +1,6 @@
 const { ErrorDeNegocio } = require('../utilidades/errores');
 
-function crearIngredientesServicio({ ingredientesRepositorio }) {
+function crearIngredientesServicio({ ingredientesRepositorio, recetasRepositorio }) {
   function verificarIngredienteExiste(id) {
     const ingrediente = ingredientesRepositorio.buscarPorId(id);
     if (!ingrediente) {
@@ -17,6 +17,16 @@ function crearIngredientesServicio({ ingredientesRepositorio }) {
         `Stock insuficiente de "${ingrediente.nombre}" (disponible: ${ingrediente.cantidadStock} ${ingrediente.unidadMedida})`,
         { codigo: 'STOCK_INSUFICIENTE', status: 409 }
       );
+    }
+  }
+
+  function descontarPorReceta(platoId, cantidadPlatos) {
+    const receta = recetasRepositorio.obtenerPorPlato(platoId);
+    if (receta.length === 0) {
+      throw new ErrorDeNegocio(`El plato ${platoId} no tiene una receta definida`, { codigo: 'RECETA_NO_DEFINIDA', status: 409 });
+    }
+    for (const item of receta) {
+      descontarStockSiHay(item.ingredienteId, item.cantidadRequerida * cantidadPlatos);
     }
   }
 
@@ -38,6 +48,7 @@ function crearIngredientesServicio({ ingredientesRepositorio }) {
     },
 
     descontarStockSiHay,
+    descontarPorReceta,
   };
 }
 

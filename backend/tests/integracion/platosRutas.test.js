@@ -128,3 +128,62 @@ test('PATCH /api/platos/:id/disponibilidad desactiva un plato', async () => {
   assert.equal(respuesta.status, 200);
   assert.equal(respuesta.body.disponible, false);
 });
+
+test('admin reemplaza la receta de un plato', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const categoria = await crearCategoria(agente, 'Entradas');
+  const plato = await agente.post('/api/platos').send({ categoriaId: categoria.id, nombre: 'Empanadas', precio: 8000 });
+  const ingrediente = await agente.post('/api/ingredientes').send({ nombre: 'Harina', cantidadStock: 100, unidadMedida: 'kg' });
+
+  const respuesta = await agente.post(`/api/platos/${plato.body.id}/receta`).send({
+    items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 0.2 }],
+  });
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.body.length, 1);
+  assert.equal(respuesta.body[0].ingredienteId, ingrediente.body.id);
+});
+
+test('reemplazar receta de un plato inexistente responde 404', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const ingrediente = await agente.post('/api/ingredientes').send({ nombre: 'Harina', cantidadStock: 100, unidadMedida: 'kg' });
+
+  const respuesta = await agente.post('/api/platos/9999/receta').send({
+    items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 0.2 }],
+  });
+
+  assert.equal(respuesta.status, 404);
+  assert.equal(respuesta.body.error.codigo, 'PLATO_NO_ENCONTRADO');
+});
+
+test('reemplazar receta con ingrediente inexistente responde 404', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const categoria = await crearCategoria(agente, 'Entradas');
+  const plato = await agente.post('/api/platos').send({ categoriaId: categoria.id, nombre: 'Empanadas', precio: 8000 });
+
+  const respuesta = await agente.post(`/api/platos/${plato.body.id}/receta`).send({
+    items: [{ ingredienteId: 9999, cantidadRequerida: 0.2 }],
+  });
+
+  assert.equal(respuesta.status, 404);
+  assert.equal(respuesta.body.error.codigo, 'INGREDIENTE_NO_ENCONTRADO');
+});
+
+test('reemplazar la receta dos veces deja solo la última versión', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const categoria = await crearCategoria(agente, 'Entradas');
+  const plato = await agente.post('/api/platos').send({ categoriaId: categoria.id, nombre: 'Empanadas', precio: 8000 });
+  const harina = await agente.post('/api/ingredientes').send({ nombre: 'Harina', cantidadStock: 100, unidadMedida: 'kg' });
+  const carne = await agente.post('/api/ingredientes').send({ nombre: 'Carne', cantidadStock: 100, unidadMedida: 'kg' });
+
+  await agente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: harina.body.id, cantidadRequerida: 0.2 }] });
+  const respuesta = await agente.post(`/api/platos/${plato.body.id}/receta`).send({ items: [{ ingredienteId: carne.body.id, cantidadRequerida: 0.15 }] });
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.body.length, 1);
+  assert.equal(respuesta.body[0].ingredienteId, carne.body.id);
+});

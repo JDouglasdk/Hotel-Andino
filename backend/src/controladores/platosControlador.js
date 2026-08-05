@@ -27,6 +27,10 @@ function crearPlatosControlador({ platosServicio }) {
       const plato = platosServicio.cambiarDisponibilidadPlato({ id: Number(req.params.id), disponible: req.body.disponible });
       res.json(plato);
     },
+    reemplazarReceta(req, res) {
+      const receta = platosServicio.reemplazarReceta({ platoId: Number(req.params.id), items: req.body.items });
+      res.json(receta);
+    },
   };
 }
 

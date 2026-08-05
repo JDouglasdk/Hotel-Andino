@@ -24,9 +24,17 @@ const esquemaFiltrarPlatos = z.object({
   disponible: disponibleQueryBooleano.optional(),
 }).strict();
 
+const esquemaReemplazarReceta = z.object({
+  items: z.array(z.object({
+    ingredienteId: z.coerce.number().int().positive(),
+    cantidadRequerida: z.number().positive(),
+  })).min(1),
+}).strict();
+
 module.exports = {
   esquemaCrearPlato,
   esquemaActualizarPlato,
   esquemaCambiarDisponibilidadPlato,
   esquemaFiltrarPlatos,
+  esquemaReemplazarReceta,
 };
