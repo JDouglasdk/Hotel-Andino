@@ -6,3 +6,4 @@ node_modules/
 coverage/
 Diagrama hotel.drawio
 .claude/skills/
+.worktrees/
