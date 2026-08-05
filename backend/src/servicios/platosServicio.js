@@ -1,39 +1,62 @@
-const { ErrorDeNegocio } = require('../utilidades/errores');
+const { ErrorDeNegocio, ErrorNoEncontrado } = require('../utilidades/errores');
 
-function crearPlatosServicio({ platosRepositorio, categoriasRepositorio }) {
-  function verificarCategoriaExiste(categoriaId) {
-    if (!categoriasRepositorio.buscarPorId(categoriaId)) {
-      throw new ErrorDeNegocio(`La categoría ${categoriaId} no existe`, { codigo: 'CATEGORIA_NO_ENCONTRADA', status: 404 });
+// Recibe `conexion` además de los repositorios porque el alta de un plato
+// con receta escribe en dos tablas (`platos` y `plato_ingrediente`) y debe
+// ser atómica: si falla un ingrediente de la receta, no debe quedar el
+// plato creado sin receta completa.
+function crearPlatosServicio({ platosRepositorio, recetasRepositorio, categoriasServicio, ingredientesServicio, conexion }) {
+  function crearPlato({ categoriaId, nombre, precio, informacion, receta }) {
+    categoriasServicio.obtenerPorId(categoriaId); // lanza ErrorNoEncontrado si no existe
+
+    for (const item of receta) {
+      ingredientesServicio.obtenerPorId(item.ingredienteId); // lanza ErrorNoEncontrado si no existe
     }
+
+    const ejecutarAlta = conexion.transaction(() => {
+      const plato = platosRepositorio.crear({ categoriaId, nombre, precio, informacion });
+      for (const item of receta) {
+        recetasRepositorio.agregarIngrediente({
+          platoId: plato.id,
+          ingredienteId: item.ingredienteId,
+          cantidadRequerida: item.cantidadRequerida,
+        });
+      }
+      return plato;
+    });
+
+    return ejecutarAlta();
   }
 
-  function verificarPlatoExiste(id) {
-    if (!platosRepositorio.buscarPorId(id)) {
-      throw new ErrorDeNegocio(`El plato ${id} no existe`, { codigo: 'PLATO_NO_ENCONTRADO', status: 404 });
+  function obtenerPorId(id) {
+    const plato = platosRepositorio.obtenerPorId(id);
+    if (!plato) {
+      throw new ErrorNoEncontrado('No existe un plato con ese id');
     }
+    return plato;
   }
 
-  return {
-    crearPlato({ categoriaId, nombre, precio, informacion }) {
-      verificarCategoriaExiste(categoriaId);
-      return platosRepositorio.crear({ categoriaId, nombre, precio, informacion });
-    },
+  function obtenerRecetaDelPlato(platoId) {
+    obtenerPorId(platoId);
+    return recetasRepositorio.obtenerPorPlato(platoId);
+  }
 
-    actualizarPlato({ id, categoriaId, nombre, precio, informacion }) {
-      verificarPlatoExiste(id);
-      verificarCategoriaExiste(categoriaId);
-      return platosRepositorio.actualizar({ id, categoriaId, nombre, precio, informacion });
-    },
+  function listarTodos() {
+    return platosRepositorio.listarTodos();
+  }
 
-    cambiarDisponibilidadPlato({ id, disponible }) {
-      verificarPlatoExiste(id);
-      return platosRepositorio.cambiarDisponibilidad({ id, disponible });
-    },
+  // Usado por pedidosServicio para validar disponibilidad al tomar comanda.
+  function obtenerPlatoDisponible(id) {
+    const plato = obtenerPorId(id);
+    if (!plato.disponible) {
+      throw new ErrorDeNegocio(`El plato "${plato.nombre}" no está disponible`, {
+        codigo: 'PLATO_NO_DISPONIBLE',
+        status: 409,
+      });
+    }
+    return plato;
+  }
 
-    listarPlatos({ categoriaId, disponible } = {}) {
-      return platosRepositorio.listar({ categoriaId, disponible });
-    },
-  };
+  return { crearPlato, obtenerPorId, obtenerRecetaDelPlato, listarTodos, obtenerPlatoDisponible };
 }
 
 module.exports = { crearPlatosServicio };

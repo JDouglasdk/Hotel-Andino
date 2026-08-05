@@ -1,17 +1,20 @@
 const express = require('express');
-const { crearRequiereRol } = require('../middlewares/autenticacion');
-const { validar } = require('../middlewares/validacion');
-const { esquemaIdParametro } = require('../esquemas/comunEsquemas');
-const { esquemaCrearPedido, esquemaCambiarEstadoPedido, esquemaFiltrarPedidos } = require('../esquemas/pedidosEsquemas');
 
-function crearRutasPedidos({ controlador, requiereSesion }) {
+// Registrar comanda: mesero/admin. Cambiar estado: cocina la avanza
+// (pendiente→en_preparacion→listo), mesero la entrega; admin puede todo.
+// Cualquiera de los cuatro roles puede consultar.
+function crearRutasPedidos({ controlador, requiereSesion, requiereRol }) {
   const router = express.Router();
-  const requiereMesero = crearRequiereRol('mesero');
 
-  router.get('/', requiereSesion, validar({ consulta: esquemaFiltrarPedidos }), controlador.listar);
-  router.get('/:id', requiereSesion, validar({ parametros: esquemaIdParametro }), controlador.obtenerPorId);
-  router.post('/', requiereSesion, requiereMesero, validar({ cuerpo: esquemaCrearPedido }), controlador.crear);
-  router.patch('/:id/estado', requiereSesion, validar({ parametros: esquemaIdParametro, cuerpo: esquemaCambiarEstadoPedido }), controlador.cambiarEstado);
+  router.get('/', requiereSesion, controlador.listar);
+  router.get('/:id', requiereSesion, controlador.obtenerPorId);
+  router.post('/', requiereSesion, requiereRol('admin', 'mesero'), controlador.crear);
+  router.patch(
+    '/:id/estado',
+    requiereSesion,
+    requiereRol('admin', 'mesero', 'cocina'),
+    controlador.cambiarEstado
+  );
 
   return router;
 }

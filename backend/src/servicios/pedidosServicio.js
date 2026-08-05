@@ -1,79 +1,160 @@
 const { ErrorDeNegocio, ErrorNoEncontrado } = require('../utilidades/errores');
 
-// Debe coincidir exactamente con el CHECK de la columna `estado` en
-// backend/src/db/migraciones/007_crear_pedidos.sql. Clave "estadoActual->nuevoEstado".
-const TRANSICIONES_PERMITIDAS = {
-  'pendiente->en_preparacion': ['cocina'],
-  'en_preparacion->listo': ['cocina'],
-  'listo->entregado': ['mesero'],
-  'pendiente->cancelado': ['mesero', 'cocina'],
-  'en_preparacion->cancelado': ['mesero', 'cocina'],
+// Regla de negocio central del reto (ver docs/decisiones.md): cuántas
+// franjas distintas por día tiene derecho a consumir cada tipo de huésped.
+const LIMITES_COMIDAS_POR_TIPO = { ordinario: 1, ejecutivo: 2, vip: 3 };
+
+const FRANJAS_VALIDAS = ['desayuno', 'almuerzo', 'cena'];
+
+// Máquina de estados de la comanda (ver migración 007): desde cualquier
+// estado no terminal se puede cancelar; el resto avanza en un solo sentido.
+const TRANSICIONES_VALIDAS = {
+  pendiente: ['en_preparacion', 'cancelado'],
+  en_preparacion: ['listo', 'cancelado'],
+  listo: ['entregado', 'cancelado'],
+  entregado: [],
+  cancelado: [],
 };
 
-function crearPedidosServicio({ pedidosRepositorio, huespedesRepositorio, platosRepositorio, derechoDeComidasServicio, inventarioServicio }) {
-  function verificarHuespedExiste(huespedId) {
-    if (!huespedesRepositorio.buscarPorId(huespedId)) {
-      throw new ErrorDeNegocio(`El huésped ${huespedId} no existe`, { codigo: 'HUESPED_NO_ENCONTRADO', status: 404 });
+// Recibe `conexion` (además de los repositorios/servicios) porque crear una
+// comanda es una operación atómica que toca tres cosas a la vez: la comanda
+// misma, sus items y el descuento de inventario según receta. Si falla el
+// descuento de un ingrediente a mitad de camino, toda la comanda debe
+// revertirse — no puede quedar una comanda a medio confirmar.
+function crearPedidosServicio({
+  pedidosRepositorio,
+  huespedesServicio,
+  platosServicio,
+  ingredientesServicio,
+  conexion,
+}) {
+  function validarDerechoDeComidas(huesped, franja) {
+    const limite = LIMITES_COMIDAS_POR_TIPO[huesped.tipo_huesped];
+    const franjasConsumidas = pedidosRepositorio.franjasConsumidasHoy(huesped.id);
+    const yaConsumioEstaFranja = franjasConsumidas.includes(franja);
+
+    // Tope absoluto: solo existen 3 franjas en el día. Si ya se consumieron
+    // las 3 (caso típico de vip, límite=3), no queda ninguna disponible,
+    // ni siquiera para "repetir" una franja ya usada — no hay nada más que
+    // pedir hoy.
+    if (franjasConsumidas.length >= FRANJAS_VALIDAS.length) {
+      throw new ErrorDeNegocio(
+        `El huésped ya consumió sus ${limite} comida(s) del día (tipo ${huesped.tipo_huesped})`,
+        { codigo: 'LIMITE_COMIDAS_EXCEDIDO', status: 409 }
+      );
+    }
+
+    if (!yaConsumioEstaFranja && franjasConsumidas.length >= limite) {
+      throw new ErrorDeNegocio(
+        `El huésped ya consumió sus ${limite} comida(s) del día (tipo ${huesped.tipo_huesped})`,
+        { codigo: 'LIMITE_COMIDAS_EXCEDIDO', status: 409 }
+      );
     }
   }
 
-  function verificarPlatoDisponible(platoId) {
-    const plato = platosRepositorio.buscarPorId(platoId);
-    if (!plato) {
-      throw new ErrorDeNegocio(`El plato ${platoId} no existe`, { codigo: 'PLATO_NO_ENCONTRADO', status: 404 });
-    }
-    if (!plato.disponible) {
-      throw new ErrorDeNegocio(`El plato ${platoId} no está disponible`, { codigo: 'PLATO_NO_DISPONIBLE', status: 409 });
-    }
-    return plato;
+  // Consulta (sin crear nada) el plan de alimentación del huésped para hoy:
+  // cuántas comidas tiene derecho, cuántas ya consumió y qué franjas todavía
+  // puede pedir. Reutiliza `validarDerechoDeComidas` (simulándola franja por
+  // franja) para no duplicar la regla de negocio en dos lugares.
+  function consultarPlanAlimentacion(huespedId) {
+    const huesped = huespedesServicio.obtenerPorId(huespedId);
+    const limiteDiario = LIMITES_COMIDAS_POR_TIPO[huesped.tipo_huesped];
+    const franjasConsumidasHoy = pedidosRepositorio.franjasConsumidasHoy(huesped.id);
+
+    const franjasDisponiblesHoy = FRANJAS_VALIDAS.filter((franja) => {
+      try {
+        validarDerechoDeComidas(huesped, franja);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    });
+
+    return {
+      huespedId: huesped.id,
+      tipoHuesped: huesped.tipo_huesped,
+      limiteDiario,
+      franjasConsumidasHoy,
+      comidasRestantesHoy: Math.max(limiteDiario - franjasConsumidasHoy.length, 0),
+      franjasDisponiblesHoy,
+    };
   }
 
-  function verificarPedidoExiste(id) {
-    const pedido = pedidosRepositorio.buscarPorId(id);
-    if (!pedido) {
-      throw new ErrorNoEncontrado(`El pedido ${id} no existe`);
+  function crearPedido({ huespedId, usuarioId, franja, items }) {
+    if (!FRANJAS_VALIDAS.includes(franja)) {
+      throw new ErrorDeNegocio('franja inválida', { codigo: 'FRANJA_INVALIDA' });
     }
-    return pedido;
-  }
+    if (!items || items.length === 0) {
+      throw new ErrorDeNegocio('La comanda debe incluir al menos un plato', { codigo: 'PEDIDO_VACIO' });
+    }
 
-  return {
-    crearPedido({ huespedId, usuarioId, franja, items }) {
-      verificarHuespedExiste(huespedId);
-      const itemsConPrecio = items.map((item) => {
-        const plato = verificarPlatoDisponible(item.platoId);
-        return { platoId: item.platoId, cantidad: item.cantidad, precioUnitario: plato.precio };
-      });
+    const huesped = huespedesServicio.obtenerPorId(huespedId);
+    validarDerechoDeComidas(huesped, franja);
 
-      derechoDeComidasServicio.validarDerecho({ huespedId, franja });
+    // Se valida disponibilidad ANTES de la transacción para poder devolver
+    // un error de "plato no disponible" claro sin haber tocado inventario.
+    const itemsConPlato = items.map((item) => ({
+      plato: platosServicio.obtenerPlatoDisponible(item.platoId),
+      cantidad: item.cantidad,
+    }));
 
-      const pedido = pedidosRepositorio.crear({ huespedId, usuarioId, franja, items: itemsConPrecio });
+    const ejecutarCreacion = conexion.transaction(() => {
+      const pedido = pedidosRepositorio.crear({ huespedId, usuarioId, franja });
 
-      inventarioServicio.descontarPorPedido({ items: items.map((item) => ({ platoId: item.platoId, cantidad: item.cantidad })) });
+      for (const { plato, cantidad } of itemsConPlato) {
+        pedidosRepositorio.agregarItem({
+          pedidoId: pedido.id,
+          platoId: plato.id,
+          cantidad,
+          precioUnitario: plato.precio,
+        });
+
+        // Descuenta del inventario todos los ingredientes de la receta del
+        // plato, escalados por la cantidad pedida. Lanza STOCK_INSUFICIENTE
+        // si algún ingrediente no alcanza — better-sqlite3 revierte toda la
+        // transacción (comanda + items + descuentos previos) al propagarse
+        // la excepción fuera de conexion.transaction().
+        ingredientesServicio.descontarPorReceta(plato.id, cantidad);
+      }
 
       return pedido;
-    },
+    });
 
-    cambiarEstadoPedido({ id, nuevoEstado, rol }) {
-      const pedido = verificarPedidoExiste(id);
-      const clave = `${pedido.estado}->${nuevoEstado}`;
-      const rolesPermitidos = TRANSICIONES_PERMITIDAS[clave];
-      if (!rolesPermitidos) {
-        throw new ErrorDeNegocio(`No se puede pasar de "${pedido.estado}" a "${nuevoEstado}"`, { codigo: 'TRANSICION_INVALIDA', status: 409 });
-      }
-      if (!rolesPermitidos.includes(rol)) {
-        throw new ErrorDeNegocio('No tiene permiso para esta acción', { codigo: 'NO_AUTORIZADO', status: 403 });
-      }
-      return pedidosRepositorio.cambiarEstado({ id, estado: nuevoEstado });
-    },
+    const pedido = ejecutarCreacion();
+    return obtenerPedidoCompleto(pedido.id);
+  }
 
-    obtenerPedidoPorId(id) {
-      return verificarPedidoExiste(id);
-    },
+  function obtenerPedidoCompleto(id) {
+    const pedido = pedidosRepositorio.obtenerPorId(id);
+    if (!pedido) {
+      throw new ErrorNoEncontrado('No existe un pedido con ese id');
+    }
+    return { ...pedido, items: pedidosRepositorio.listarItemsPorPedido(id) };
+  }
 
-    listarPedidos({ estado, franja } = {}) {
-      return pedidosRepositorio.listar({ estado, franja });
-    },
-  };
+  function cambiarEstado(id, nuevoEstado) {
+    const pedido = pedidosRepositorio.obtenerPorId(id);
+    if (!pedido) {
+      throw new ErrorNoEncontrado('No existe un pedido con ese id');
+    }
+
+    const permitidas = TRANSICIONES_VALIDAS[pedido.estado] ?? [];
+    if (!permitidas.includes(nuevoEstado)) {
+      throw new ErrorDeNegocio(`No se puede pasar de "${pedido.estado}" a "${nuevoEstado}"`, {
+        codigo: 'TRANSICION_INVALIDA',
+        status: 409,
+      });
+    }
+
+    pedidosRepositorio.actualizarEstado(id, nuevoEstado);
+    return obtenerPedidoCompleto(id);
+  }
+
+  function listarTodos() {
+    return pedidosRepositorio.listarTodos();
+  }
+
+  return { crearPedido, obtenerPedidoCompleto, cambiarEstado, listarTodos, consultarPlanAlimentacion };
 }
 
-module.exports = { crearPedidosServicio };
+module.exports = { crearPedidosServicio, LIMITES_COMIDAS_POR_TIPO, FRANJAS_VALIDAS, TRANSICIONES_VALIDAS };

@@ -1,40 +1,35 @@
+// Repositorio de huéspedes. Recibe la conexión SQLite por parámetro (nunca
+// hace `require` directo de `db/conexion.js`) para poder probarse con una
+// conexión `:memory:`. Solo queries parametrizadas.
 function crearHuespedesRepositorio(conexion) {
-  const insertar = conexion.prepare(`
-    INSERT INTO huespedes (documento, nombre_completo, telefono, tipo_huesped, creado_en)
-    VALUES (@documento, @nombreCompleto, @telefono, @tipoHuesped, @creadoEn)
-  `);
-  const buscarPorIdStmt = conexion.prepare('SELECT * FROM huespedes WHERE id = ?');
-  const buscarPorDocumentoStmt = conexion.prepare('SELECT * FROM huespedes WHERE documento = ?');
-
-  function aDominio(fila) {
-    if (!fila) return null;
-    return {
-      id: fila.id,
-      documento: fila.documento,
-      nombreCompleto: fila.nombre_completo,
-      telefono: fila.telefono,
-      tipoHuesped: fila.tipo_huesped,
-      creadoEn: fila.creado_en,
-    };
+  function obtenerPorDocumento(documento) {
+    return conexion
+      .prepare('SELECT * FROM huespedes WHERE documento = ?')
+      .get(documento);
   }
 
   function obtenerPorId(id) {
-    return aDominio(buscarPorIdStmt.get(id));
+    return conexion.prepare('SELECT * FROM huespedes WHERE id = ?').get(id);
   }
 
-  return {
-    crear({ documento, nombreCompleto, telefono, tipoHuesped }) {
-      const creadoEn = new Date().toISOString();
-      const resultado = insertar.run({ documento, nombreCompleto, telefono: telefono ?? null, tipoHuesped, creadoEn });
-      return obtenerPorId(resultado.lastInsertRowid);
-    },
-    buscarPorId(id) {
-      return obtenerPorId(id);
-    },
-    buscarPorDocumento(documento) {
-      return aDominio(buscarPorDocumentoStmt.get(documento));
-    },
-  };
+  function crear({ documento, nombreCompleto, telefono, tipoHuesped }) {
+    const resultado = conexion
+      .prepare(
+        `INSERT INTO huespedes (documento, nombre_completo, telefono, tipo_huesped)
+         VALUES (?, ?, ?, ?)`
+      )
+      .run(documento, nombreCompleto, telefono ?? null, tipoHuesped);
+
+    return obtenerPorId(resultado.lastInsertRowid);
+  }
+
+  function listarTodos() {
+    return conexion
+      .prepare('SELECT * FROM huespedes ORDER BY nombre_completo ASC')
+      .all();
+  }
+
+  return { obtenerPorDocumento, obtenerPorId, crear, listarTodos };
 }
 
 module.exports = { crearHuespedesRepositorio };

@@ -1,14 +1,16 @@
 const express = require('express');
-const { crearRequiereRol } = require('../middlewares/autenticacion');
-const { validar } = require('../middlewares/validacion');
-const { esquemaCrearHuesped, esquemaBuscarHuespedPorDocumento } = require('../esquemas/huespedesEsquemas');
 
-function crearRutasHuespedes({ controlador, requiereSesion }) {
+// Cualquier rol autenticado puede consultar huéspedes (lo necesita el
+// mesero para tomar la comanda, cocina/jefeDeCaja para trazabilidad).
+// Crear/editar queda restringido a admin/mesero — a definir con el equipo
+// si jefeDeCaja también debería poder dar de alta huéspedes.
+function crearRutasHuespedes({ controlador, requiereSesion, requiereRol }) {
   const router = express.Router();
-  const requiereMeseroOAdmin = crearRequiereRol('mesero', 'admin');
 
-  router.get('/', requiereSesion, validar({ consulta: esquemaBuscarHuespedPorDocumento }), controlador.buscarPorDocumento);
-  router.post('/', requiereSesion, requiereMeseroOAdmin, validar({ cuerpo: esquemaCrearHuesped }), controlador.crear);
+  router.get('/', requiereSesion, controlador.listar);
+  router.get('/:documento', requiereSesion, controlador.obtenerPorDocumento);
+  router.get('/:documento/plan-alimentacion', requiereSesion, controlador.planAlimentacion);
+  router.post('/', requiereSesion, requiereRol('admin', 'mesero'), controlador.crear);
 
   return router;
 }

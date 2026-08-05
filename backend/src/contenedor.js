@@ -3,69 +3,83 @@
 // BD, cada servicio recibe los repositorios (y otros servicios) que necesita
 // por parámetro — nunca hace `require` directo de un repositorio. Así la
 // lógica de negocio en servicios/ no depende de cómo se conecta a SQLite.
-//
-// El módulo que falta (ingredientes) se agrega aquí siguiendo el mismo
-// patrón: repositorio primero, servicio después, registrar ambos abajo.
 
-const { crearUsuariosRepositorio } = require('./modelos/usuariosRepositorio');
 const { crearCategoriasRepositorio } = require('./modelos/categoriasRepositorio');
-const { crearPlatosRepositorio } = require('./modelos/platosRepositorio');
 const { crearHuespedesRepositorio } = require('./modelos/huespedesRepositorio');
+const { crearIngredientesRepositorio } = require('./modelos/ingredientesRepositorio');
 const { crearPedidosRepositorio } = require('./modelos/pedidosRepositorio');
-const { crearAutenticacionServicio } = require('./servicios/autenticacionServicio');
-const { crearUsuariosServicio } = require('./servicios/usuariosServicio');
-const { crearCategoriasServicio } = require('./servicios/categoriasServicio');
-const { crearPlatosServicio } = require('./servicios/platosServicio');
-const { crearHuespedesServicio } = require('./servicios/huespedesServicio');
-const { crearPedidosServicio } = require('./servicios/pedidosServicio');
+const { crearPlatosRepositorio } = require('./modelos/platosRepositorio');
+const { crearRecetasRepositorio } = require('./modelos/recetasRepositorio');
+const { crearUsuariosRepositorio } = require('./modelos/usuariosRepositorio');
 
-// TODO(compañero): reemplazar estos dos placeholders con la implementación
-// real de derecho de comidas / descuento de inventario cuando existan — ver
-// docs/superpowers/specs/2026-08-04-maquina-estados-comanda-design.md para
-// la interfaz exacta. Solo hay que cambiar este registro, pedidosServicio
-// no cambia.
-const derechoDeComidasServicioPlaceholder = {
-  validarDerecho() {}, // permite todo
-};
-const inventarioServicioPlaceholder = {
-  descontarPorPedido() {}, // no hace nada
-};
+const { crearAutenticacionServicio } = require('./servicios/autenticacionServicio');
+const { crearCategoriasServicio } = require('./servicios/categoriasServicio');
+const { crearHuespedesServicio } = require('./servicios/huespedesServicio');
+const { crearIngredientesServicio } = require('./servicios/ingredientesServicio');
+const { crearPedidosServicio } = require('./servicios/pedidosServicio');
+const { crearPlatosServicio } = require('./servicios/platosServicio');
+const { crearReportesServicio } = require('./servicios/reportesServicio');
+const { crearUsuariosServicio } = require('./servicios/usuariosServicio');
 
 function crearContenedor(conexion) {
   const repositorios = {
-    usuariosRepositorio: crearUsuariosRepositorio(conexion),
     categoriasRepositorio: crearCategoriasRepositorio(conexion),
-    platosRepositorio: crearPlatosRepositorio(conexion),
     huespedesRepositorio: crearHuespedesRepositorio(conexion),
+    ingredientesRepositorio: crearIngredientesRepositorio(conexion),
     pedidosRepositorio: crearPedidosRepositorio(conexion),
+    platosRepositorio: crearPlatosRepositorio(conexion),
+    recetasRepositorio: crearRecetasRepositorio(conexion),
+    usuariosRepositorio: crearUsuariosRepositorio(conexion),
   };
 
-  const autenticacionServicio = crearAutenticacionServicio({ usuariosRepositorio: repositorios.usuariosRepositorio });
+  const servicios = {};
 
-  const servicios = {
-    autenticacionServicio,
-    usuariosServicio: crearUsuariosServicio({
-      usuariosRepositorio: repositorios.usuariosRepositorio,
-      autenticacionServicio,
-    }),
-    categoriasServicio: crearCategoriasServicio({
-      categoriasRepositorio: repositorios.categoriasRepositorio,
-    }),
-    platosServicio: crearPlatosServicio({
-      platosRepositorio: repositorios.platosRepositorio,
-      categoriasRepositorio: repositorios.categoriasRepositorio,
-    }),
-    huespedesServicio: crearHuespedesServicio({
-      huespedesRepositorio: repositorios.huespedesRepositorio,
-    }),
-    pedidosServicio: crearPedidosServicio({
-      pedidosRepositorio: repositorios.pedidosRepositorio,
-      huespedesRepositorio: repositorios.huespedesRepositorio,
-      platosRepositorio: repositorios.platosRepositorio,
-      derechoDeComidasServicio: derechoDeComidasServicioPlaceholder,
-      inventarioServicio: inventarioServicioPlaceholder,
-    }),
-  };
+  servicios.usuariosServicio = crearUsuariosServicio({
+    usuariosRepositorio: repositorios.usuariosRepositorio,
+  });
+
+  servicios.autenticacionServicio = crearAutenticacionServicio({
+    usuariosRepositorio: repositorios.usuariosRepositorio,
+  });
+
+  servicios.categoriasServicio = crearCategoriasServicio({
+    categoriasRepositorio: repositorios.categoriasRepositorio,
+  });
+
+  servicios.huespedesServicio = crearHuespedesServicio({
+    huespedesRepositorio: repositorios.huespedesRepositorio,
+  });
+
+  // Necesita recetasRepositorio + conexion para descontarPorReceta
+  // (transacción atómica sobre varios ingredientes a la vez).
+  servicios.ingredientesServicio = crearIngredientesServicio({
+    ingredientesRepositorio: repositorios.ingredientesRepositorio,
+    recetasRepositorio: repositorios.recetasRepositorio,
+    conexion,
+  });
+
+  servicios.platosServicio = crearPlatosServicio({
+    platosRepositorio: repositorios.platosRepositorio,
+    recetasRepositorio: repositorios.recetasRepositorio,
+    categoriasServicio: servicios.categoriasServicio,
+    ingredientesServicio: servicios.ingredientesServicio,
+    conexion,
+  });
+
+  // Pieza central del reto: necesita huespedesServicio (derecho de comidas),
+  // platosServicio (disponibilidad) e ingredientesServicio (descuento por
+  // receta), y `conexion` para que crear la comanda sea atómico.
+  servicios.pedidosServicio = crearPedidosServicio({
+    pedidosRepositorio: repositorios.pedidosRepositorio,
+    huespedesServicio: servicios.huespedesServicio,
+    platosServicio: servicios.platosServicio,
+    ingredientesServicio: servicios.ingredientesServicio,
+    conexion,
+  });
+
+  servicios.reportesServicio = crearReportesServicio({
+    pedidosRepositorio: repositorios.pedidosRepositorio,
+  });
 
   return { repositorios, servicios };
 }

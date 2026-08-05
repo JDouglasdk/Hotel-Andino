@@ -1,56 +1,54 @@
+const bcrypt = require('bcryptjs');
 const { ErrorDeNegocio, ErrorNoEncontrado } = require('../utilidades/errores');
 
-// Debe coincidir exactamente con el CHECK de la columna `rol` en
-// backend/src/db/migraciones/001_crear_usuarios.sql — si se agrega un rol
-// nuevo, se cambia en los dos lugares.
 const ROLES_VALIDOS = ['admin', 'mesero', 'cocina', 'jefeDeCaja'];
+const RONDAS_BCRYPT = 10;
 
-function quitarContrasena(usuario) {
-  if (!usuario) return usuario;
-  const { contrasenaHash, ...resto } = usuario;
-  return resto;
-}
-
-function validarRol(rol) {
-  if (!ROLES_VALIDOS.includes(rol)) {
-    throw new ErrorDeNegocio(`Rol inválido: ${rol}`, { codigo: 'ROL_INVALIDO', status: 422 });
+// `obtenerUsuarioPorId` es el contrato que consume
+// `middlewares/autenticacion.js` (crearRequiereSesion) — debe devolver el
+// usuario crudo (con `activo`) o `undefined`/`null` si no existe.
+function crearUsuariosServicio({ usuariosRepositorio }) {
+  function quitarHash(usuario) {
+    if (!usuario) return usuario;
+    const { contrasena_hash, ...resto } = usuario; // eslint-disable-line no-unused-vars
+    return resto;
   }
+
+  function obtenerUsuarioPorId(id) {
+    return usuariosRepositorio.obtenerPorId(id);
+  }
+
+  function obtenerPorIdSinHash(id) {
+    const usuario = usuariosRepositorio.obtenerPorId(id);
+    if (!usuario) {
+      throw new ErrorNoEncontrado('No existe un usuario con ese id');
+    }
+    return quitarHash(usuario);
+  }
+
+  function crearUsuario({ nombreCompleto, correo, contrasena, rol }) {
+    if (!ROLES_VALIDOS.includes(rol)) {
+      throw new ErrorDeNegocio('Rol inválido', { codigo: 'ROL_INVALIDO' });
+    }
+
+    const existente = usuariosRepositorio.obtenerPorCorreo(correo);
+    if (existente) {
+      throw new ErrorDeNegocio('Ya existe un usuario registrado con ese correo', {
+        codigo: 'CORREO_DUPLICADO',
+        status: 409,
+      });
+    }
+
+    const contrasenaHash = bcrypt.hashSync(contrasena, RONDAS_BCRYPT);
+    const usuario = usuariosRepositorio.crear({ nombreCompleto, correo, contrasenaHash, rol });
+    return quitarHash(usuario);
+  }
+
+  function listarTodos() {
+    return usuariosRepositorio.listarTodos().map(quitarHash);
+  }
+
+  return { obtenerUsuarioPorId, obtenerPorIdSinHash, crearUsuario, listarTodos };
 }
 
-function crearUsuariosServicio({ usuariosRepositorio, autenticacionServicio }) {
-  return {
-    crearUsuario({ nombreCompleto, correo, contrasena, rol }) {
-      validarRol(rol);
-      if (usuariosRepositorio.buscarPorCorreo(correo)) {
-        throw new ErrorDeNegocio(`Ya existe un usuario con el correo ${correo}`, { codigo: 'CORREO_DUPLICADO', status: 409 });
-      }
-      const contrasenaHash = autenticacionServicio.hashearContrasena(contrasena);
-      return quitarContrasena(usuariosRepositorio.crear({ nombreCompleto, correo, contrasenaHash, rol }));
-    },
-
-    actualizarUsuario({ id, nombreCompleto, correo, rol }) {
-      validarRol(rol);
-      if (!usuariosRepositorio.buscarPorId(id)) {
-        throw new ErrorNoEncontrado(`El usuario ${id} no existe`);
-      }
-      return quitarContrasena(usuariosRepositorio.actualizar({ id, nombreCompleto, correo, rol }));
-    },
-
-    cambiarEstadoUsuario({ id, activo }) {
-      if (!usuariosRepositorio.buscarPorId(id)) {
-        throw new ErrorNoEncontrado(`El usuario ${id} no existe`);
-      }
-      return quitarContrasena(usuariosRepositorio.cambiarEstado({ id, activo }));
-    },
-
-    listarUsuarios() {
-      return usuariosRepositorio.listarTodos().map(quitarContrasena);
-    },
-
-    obtenerUsuarioPorId(id) {
-      return quitarContrasena(usuariosRepositorio.buscarPorId(id));
-    },
-  };
-}
-
-module.exports = { crearUsuariosServicio };
+module.exports = { crearUsuariosServicio, ROLES_VALIDOS };

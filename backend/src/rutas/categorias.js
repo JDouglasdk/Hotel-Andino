@@ -1,16 +1,10 @@
 const express = require('express');
-const { crearRequiereRol } = require('../middlewares/autenticacion');
-const { validar } = require('../middlewares/validacion');
-const { esquemaIdParametro } = require('../esquemas/comunEsquemas');
-const { esquemaCrearCategoria, esquemaActualizarCategoria } = require('../esquemas/categoriasEsquemas');
 
-function crearRutasCategorias({ controlador, requiereSesion }) {
+function crearRutasCategorias({ controlador, requiereSesion, requiereRol }) {
   const router = express.Router();
-  const requiereAdmin = crearRequiereRol('admin');
 
   router.get('/', requiereSesion, controlador.listar);
-  router.post('/', requiereSesion, requiereAdmin, validar({ cuerpo: esquemaCrearCategoria }), controlador.crear);
-  router.put('/:id', requiereSesion, requiereAdmin, validar({ parametros: esquemaIdParametro, cuerpo: esquemaActualizarCategoria }), controlador.actualizar);
+  router.post('/', requiereSesion, requiereRol('admin'), controlador.crear);
 
   return router;
 }
