@@ -12,6 +12,10 @@ window.Comun = window.Comun || {};
     jefeDeCaja: 'Jefe de caja',
   };
 
+  // El usuario con la sesión abierta: se usa para no ofrecerle acciones que
+  // lo dejarían fuera del sistema (desactivar su propia cuenta).
+  let usuarioActual = null;
+
   // Copia local de cada listado: permite repintar una fila tras un PATCH
   // sin volver a pedir toda la sección al servidor.
   let usuarios = [];
@@ -140,7 +144,21 @@ window.Comun = window.Comun || {};
 
   // --- Usuarios ---------------------------------------------------------
 
+  function esUsuarioActual(usuario) {
+    return Boolean(usuarioActual) && usuario.id === usuarioActual.id;
+  }
+
   function crearBotonEstadoUsuario(usuario) {
+    // El admin que tiene la sesión abierta no puede desactivarse a sí mismo:
+    // el backend revalida `activo` en cada petición y le rechazaría el login,
+    // así que quedaría fuera del sistema sin forma de reactivarse desde la app.
+    if (esUsuarioActual(usuario)) {
+      const propia = document.createElement('span');
+      propia.className = 'texto-cuenta-propia';
+      propia.textContent = 'Tu cuenta';
+      return propia;
+    }
+
     const activar = !usuario.activo;
     const boton = crearBoton(
       activar ? 'Activar' : 'Desactivar',
@@ -497,6 +515,15 @@ window.Comun = window.Comun || {};
     return grupo;
   }
 
+  function celdasDeIngrediente(ingrediente) {
+    return [
+      ingrediente.nombre,
+      formatearCantidad(ingrediente.cantidadStock),
+      ingrediente.unidadMedida,
+      crearControlDeStock(ingrediente),
+    ];
+  }
+
   function renderizarIngredientes() {
     const contenedor = elemento('contenido-ingredientes');
     vaciar(contenedor);
@@ -506,18 +533,28 @@ window.Comun = window.Comun || {};
       return;
     }
 
-    const filas = ingredientes.map((ingrediente) => [
-      ingrediente.nombre,
-      formatearCantidad(ingrediente.cantidadStock),
-      ingrediente.unidadMedida,
-      crearControlDeStock(ingrediente),
-    ]);
-
     contenedor.append(crearTabla(
       ['Ingrediente', 'Stock actual', 'Unidad de medida', 'Nuevo stock'],
-      filas,
+      ingredientes.map(celdasDeIngrediente),
       (fila, indice) => { fila.dataset.ingredienteId = String(ingredientes[indice].id); },
     ));
+  }
+
+  // Repinta solo la fila guardada. Repintar toda la tabla borraría lo que el
+  // admin ya escribió en los inputs de las demás filas y aún no ha guardado.
+  function repintarFilaDeIngrediente(ingrediente) {
+    const fila = document.querySelector(
+      '#contenido-ingredientes tr[data-ingrediente-id="' + ingrediente.id + '"]',
+    );
+    if (!fila) {
+      renderizarIngredientes();
+      return;
+    }
+
+    const nueva = document.createElement('tr');
+    celdasDeIngrediente(ingrediente).forEach((contenido) => nueva.append(crearCelda(contenido)));
+    nueva.dataset.ingredienteId = String(ingrediente.id);
+    fila.replaceWith(nueva);
   }
 
   // El PATCH reemplaza el valor absoluto del stock, no suma ni resta.
@@ -535,8 +572,9 @@ window.Comun = window.Comun || {};
     boton.disabled = true;
     try {
       const actualizado = await enviarJson('/api/ingredientes/' + ingrediente.id + '/stock', 'PATCH', { cantidadStock });
-      reemplazarPorId(ingredientes, ingrediente.id, actualizado || Object.assign({}, ingrediente, { cantidadStock }));
-      renderizarIngredientes();
+      const registro = actualizado || Object.assign({}, ingrediente, { cantidadStock });
+      reemplazarPorId(ingredientes, ingrediente.id, registro);
+      repintarFilaDeIngrediente(registro);
       mostrarBanner('exito-ingredientes', 'Stock actualizado: ' + ingrediente.nombre + '.');
     } catch (error) {
       boton.disabled = false;
@@ -598,7 +636,8 @@ window.Comun = window.Comun || {};
     await cargarPlatos();
   }
 
-  function iniciarPanelAdmin() {
+  function iniciarPanelAdmin(usuario) {
+    usuarioActual = usuario || null;
     elemento('formulario-usuario').addEventListener('submit', manejarCrearUsuario);
     elemento('formulario-huesped').addEventListener('submit', manejarCrearHuesped);
     elemento('formulario-categoria').addEventListener('submit', manejarCrearCategoria);

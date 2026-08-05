@@ -156,8 +156,9 @@ test('al abrir el panel carga las cuatro secciones con sus datos', async () => {
   );
 
   // Usuarios: rol traducido, estado y la acción contraria al estado actual.
+  // La fila del admin logueado no ofrece acción: no puede desactivarse solo.
   assert.deepEqual(filasDe(documento, 'contenido-usuarios'), [
-    ['Ana Ríos', 'ana@hotel.co', 'Administrador', 'Activo', 'Desactivar'],
+    ['Ana Ríos', 'ana@hotel.co', 'Administrador', 'Activo', 'Tu cuenta'],
     ['Luis Paz', 'luis@hotel.co', 'Mesero', 'Inactivo', 'Activar'],
   ]);
 
@@ -254,29 +255,40 @@ test('un correo duplicado muestra el mensaje del backend tal cual', async () => 
 });
 
 test('desactivar un usuario pide confirmación y hace PATCH con activo en false', async () => {
+  // Luis Paz (id 2), no el admin logueado — su propia fila no ofrece acción.
+  const luisActivo = Object.assign({}, USUARIOS[1], { activo: true });
   const rutas = rutasPorDefecto({
-    '/api/usuarios/1/estado': () => respuestaOk(Object.assign({}, USUARIOS[0], { activo: false })),
+    '/api/usuarios': () => respuestaOk([copia(USUARIOS)[0], luisActivo]),
+    '/api/usuarios/2/estado': () => respuestaOk(Object.assign({}, luisActivo, { activo: false })),
   });
   const { dom, documento, llamadas } = await montarPanelAdmin(rutas);
 
-  const fila = filaPorDato(documento, 'contenido-usuarios', 'usuario-id', '1');
+  const fila = filaPorDato(documento, 'contenido-usuarios', 'usuario-id', '2');
   clic(dom, fila.querySelector('button[data-accion="desactivar"]'));
 
   const dialogo = documento.querySelector('.dialogo-overlay');
   assert.notEqual(dialogo, null, 'debía abrirse el diálogo de confirmación');
-  assert.match(dialogo.querySelector('.dialogo-mensaje').textContent, /¿desactivar a ana ríos\?/i);
+  assert.match(dialogo.querySelector('.dialogo-mensaje').textContent, /¿desactivar a luis paz\?/i);
 
   clic(dom, dialogo.querySelector('.dialogo-confirmar'));
   await dom.window.Comun._adminAccion;
 
   const patch = ultimaLlamada(llamadas);
-  assert.equal(patch.ruta, '/api/usuarios/1/estado');
+  assert.equal(patch.ruta, '/api/usuarios/2/estado');
   assert.equal(patch.opciones.method, 'PATCH');
   assert.deepEqual(JSON.parse(patch.opciones.body), { activo: false });
 
   // La fila se repinta con el estado nuevo y la acción contraria.
-  assert.deepEqual(filasDe(documento, 'contenido-usuarios')[0].slice(3), ['Inactivo', 'Activar']);
+  assert.deepEqual(filasDe(documento, 'contenido-usuarios')[1].slice(3), ['Inactivo', 'Activar']);
   assert.equal(documento.querySelector('.dialogo-overlay'), null);
+});
+
+test('el admin logueado no tiene acción de activar/desactivar en su propia fila', async () => {
+  const { documento } = await montarPanelAdmin();
+
+  const filaPropia = filaPorDato(documento, 'contenido-usuarios', 'usuario-id', '1');
+  assert.equal(filaPropia.querySelector('button[data-accion]'), null);
+  assert.match(filaPropia.textContent, /tu cuenta/i);
 });
 
 test('activar un usuario inactivo hace PATCH directo, sin diálogo', async () => {

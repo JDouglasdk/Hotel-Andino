@@ -270,6 +270,11 @@
   font-size: 1rem;
 }
 
+.texto-cuenta-propia {
+  color: var(--color-texto-secundario);
+  font-style: italic;
+}
+
 .dialogo-overlay {
   position: fixed;
   inset: 0;
