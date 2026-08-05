@@ -19,7 +19,7 @@ autenticación/usuarios, módulo de menú (categorías/platos), módulo de
 huéspedes, la máquina de estados de comanda (pedidos: crear con
 validación de huésped/plato/disponibilidad, transición de estado por rol,
 cancelación), ingredientes/recetas, validación real de derecho de
-comidas, descuento automático de inventario y caja diaria — 77 tests de
+comidas, descuento automático de inventario y caja diaria — 78 tests de
 integración en verde.
 
 **Todavía no existe**: frontend funcional (las páginas por rol siguen
@@ -50,7 +50,7 @@ cd backend && npm test
 cd frontend && npm test
 ```
 
-Mismo formato en ambos (`node --test`). Backend: 77 tests de integración
+Mismo formato en ambos (`node --test`). Backend: 78 tests de integración
 en verde (auth/usuarios, menú, huéspedes, pedidos, ingredientes/recetas,
 derecho de comidas, inventario, caja diaria). Frontend: sin tests propios
 todavía — no hay funcionalidad real que probar hasta que se construya la
