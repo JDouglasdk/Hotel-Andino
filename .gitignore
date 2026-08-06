@@ -6,6 +6,7 @@ node_modules/
 coverage/
 Diagrama hotel.drawio
 .claude/skills/
+.claude/settings.local.json
 .worktrees/
 superpowers/
 .superpowers/

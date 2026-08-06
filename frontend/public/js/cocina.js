@@ -99,6 +99,13 @@ window.Comun = window.Comun || {};
     if (!aviso) contenedor.append(crearTextoVacio(COLUMNAS[estado].textoVacio));
   }
 
+  // Deshabilita todos los botones de la tarjeta, no solo el que se pulsó:
+  // evita que un segundo clic (en este botón o en otro de la misma tarjeta)
+  // dispare una acción sobre un pedido que ya está cambiando de estado.
+  function deshabilitarBotonesDe(tarjeta, deshabilitado) {
+    tarjeta.querySelectorAll('button').forEach((boton) => { boton.disabled = deshabilitado; });
+  }
+
   function crearBotonAccion(accion, pedido, tarjeta) {
     const boton = document.createElement('button');
     boton.type = 'button';
@@ -108,16 +115,22 @@ window.Comun = window.Comun || {};
 
     boton.addEventListener('click', () => {
       if (!accion.confirmar) {
-        window.Comun._cocinaAccion = cambiarEstado(pedido, tarjeta, accion.estado, boton);
+        deshabilitarBotonesDe(tarjeta, true);
+        window.Comun._cocinaAccion = cambiarEstado(pedido, tarjeta, accion.estado);
         return;
       }
-      // Cancelar es irreversible: nunca debe salir de un clic accidental.
+      // Se deshabilita ANTES de abrir el diálogo: un doble clic en "Cancelar"
+      // no debe poder apilar dos diálogos de confirmación.
+      deshabilitarBotonesDe(tarjeta, true);
       window.Comun.dialogo.abrir({
         titulo: 'Cancelar pedido',
         mensaje: '¿Cancelar este pedido? El pedido #' + pedido.id + ' no se podrá recuperar.',
         textoConfirmar: 'Sí, cancelar',
         alConfirmar: () => {
-          window.Comun._cocinaAccion = cambiarEstado(pedido, tarjeta, accion.estado, boton);
+          window.Comun._cocinaAccion = cambiarEstado(pedido, tarjeta, accion.estado);
+        },
+        alCerrar: () => {
+          deshabilitarBotonesDe(tarjeta, false);
         },
       });
     });
@@ -194,9 +207,11 @@ window.Comun = window.Comun || {};
     actualizarVacio(destino);
   }
 
-  async function cambiarEstado(pedido, tarjeta, nuevoEstado, boton) {
+  async function cambiarEstado(pedido, tarjeta, nuevoEstado) {
     ocultarError();
-    boton.disabled = true;
+    // Ya deshabilitados por deshabilitarBotonesDe al hacer clic (o al abrir
+    // el diálogo de confirmación) — aquí solo se rehabilitan si falla, porque
+    // en éxito moverTarjeta reemplaza la tarjeta entera con botones nuevos.
     try {
       const actualizado = await window.Comun.clienteApi.peticion('/api/pedidos/' + pedido.id + '/estado', {
         method: 'PATCH',
@@ -205,7 +220,7 @@ window.Comun = window.Comun || {};
       });
       moverTarjeta(tarjeta, pedido.estado, actualizado || Object.assign({}, pedido, { estado: nuevoEstado }));
     } catch (error) {
-      boton.disabled = false;
+      deshabilitarBotonesDe(tarjeta, false);
       mostrarError(error);
     }
   }

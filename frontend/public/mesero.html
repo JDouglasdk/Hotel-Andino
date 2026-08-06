@@ -17,7 +17,7 @@
     <button type="button" id="boton-reintentar-sesion" class="boton boton--secundario">Reintentar</button>
   </div>
 
-  <main id="contenido-panel" class="panel" hidden>
+  <main id="contenido-panel" hidden>
     <h1>Panel mesero</h1>
 
     <section class="seccion-panel">
@@ -50,6 +50,15 @@
       </form>
       <p id="error-comanda" class="banner-error" hidden></p>
       <p id="exito-comanda" class="banner-exito" hidden></p>
+    </section>
+
+    <section class="seccion-panel">
+      <div class="panel-titulo">
+        <h2>Pedidos listos para entregar</h2>
+        <button type="button" id="boton-actualizar-listos" class="boton boton--secundario">Actualizar</button>
+      </div>
+      <p id="error-listos" class="banner-error" hidden></p>
+      <div id="contenido-listos"></div>
     </section>
   </main>
 

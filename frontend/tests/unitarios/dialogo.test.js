@@ -63,6 +63,56 @@ test('soloCerrar:true no muestra acciones de confirmar/cancelar', () => {
   assert.notEqual(dom.window.document.querySelector('.dialogo-cerrar'), null);
 });
 
+test('cancelar sin confirmar llama a alCerrar; confirmar no lo llama', () => {
+  const dom = crearDomConDialogo();
+  let vecesCerradoSinConfirmar = 0;
+
+  dom.window.Comun.dialogo.abrir({
+    documento: dom.window.document,
+    mensaje: 'x',
+    alConfirmar: () => {},
+    alCerrar: () => { vecesCerradoSinConfirmar += 1; },
+  });
+  dom.window.document.querySelector('.dialogo-cancelar').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+
+  assert.equal(vecesCerradoSinConfirmar, 1);
+
+  dom.window.Comun.dialogo.abrir({
+    documento: dom.window.document,
+    mensaje: 'x',
+    alConfirmar: () => {},
+    alCerrar: () => { vecesCerradoSinConfirmar += 1; },
+  });
+  dom.window.document.querySelector('.dialogo-confirmar').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+
+  assert.equal(vecesCerradoSinConfirmar, 1, 'alCerrar no debe llamarse al confirmar');
+});
+
+test('cerrar con la X también llama a alCerrar', () => {
+  const dom = crearDomConDialogo();
+  let cerrado = false;
+
+  dom.window.Comun.dialogo.abrir({
+    documento: dom.window.document,
+    mensaje: 'x',
+    soloCerrar: true,
+    alCerrar: () => { cerrado = true; },
+  });
+  dom.window.document.querySelector('.dialogo-cerrar').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+
+  assert.equal(cerrado, true);
+});
+
+test('alCerrar es opcional — cerrar sin definirlo no lanza', () => {
+  const dom = crearDomConDialogo();
+
+  dom.window.Comun.dialogo.abrir({ documento: dom.window.document, mensaje: 'x', alConfirmar: () => {} });
+
+  assert.doesNotThrow(() => {
+    dom.window.document.querySelector('.dialogo-cancelar').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  });
+});
+
 test('el texto del botón confirmar es personalizable', () => {
   const dom = crearDomConDialogo();
 

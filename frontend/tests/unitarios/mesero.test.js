@@ -56,6 +56,7 @@ async function montarPanelMesero({ rutas }) {
 
   await dom.window.Comun._panelListo;
   await dom.window.Comun._meseroPlatosListo;
+  await dom.window.Comun._meseroListosCargando;
 
   return { dom, documento: dom.window.document, llamadas };
 }
@@ -73,10 +74,17 @@ async function esperarCiclos(veces = 3) {
 }
 
 const RUTA_PLATOS = '/api/platos?disponible=true';
+const RUTA_TODOS_LOS_PLATOS = '/api/platos';
+const RUTA_LISTOS = '/api/pedidos?estado=listo';
 const RUTA_HUESPED = '/api/huespedes?documento=1020304050';
 
 function rutasBase(extra = {}) {
-  return { [RUTA_PLATOS]: () => respuestaOk(PLATOS), ...extra };
+  return {
+    [RUTA_PLATOS]: () => respuestaOk(PLATOS),
+    [RUTA_TODOS_LOS_PLATOS]: () => respuestaOk(PLATOS),
+    [RUTA_LISTOS]: () => respuestaOk([]),
+    ...extra,
+  };
 }
 
 async function buscarHuesped(contexto, documentoBuscado = '1020304050') {
@@ -91,6 +99,7 @@ test('mesero.html tiene los contenedores que mesero.js necesita', () => {
   ['formulario-buscar-huesped', 'documento-huesped', 'boton-buscar-huesped', 'error-huesped',
     'resultado-huesped', 'seccion-comanda', 'formulario-comanda', 'franja-comanda',
     'lista-platos', 'mensaje-platos', 'boton-registrar-comanda', 'error-comanda', 'exito-comanda',
+    'boton-actualizar-listos', 'error-listos', 'contenido-listos',
   ].forEach((id) => {
     assert.notEqual(doc.getElementById(id), null, `falta #${id} en mesero.html`);
   });
@@ -237,4 +246,68 @@ test('un error de red al buscar muestra el mensaje genérico propio', async () =
   await buscarHuesped(contexto);
 
   assert.match(contexto.documento.getElementById('error-huesped').textContent, /no se pudo conectar/i);
+});
+
+// --- Pedidos listos para entregar ------------------------------------
+
+const PEDIDOS_LISTOS = [
+  { id: 8, huespedId: 42, franja: 'almuerzo', estado: 'listo', items: [{ id: 1, platoId: 2, cantidad: 1 }] },
+  { id: 9, huespedId: 5, franja: 'cena', estado: 'listo', items: [{ id: 2, platoId: 1, cantidad: 2 }] },
+];
+
+test('al abrir el panel carga los pedidos listos con nombre de plato, franja y huésped', async () => {
+  const contexto = await montarPanelMesero({
+    rutas: rutasBase({ [RUTA_LISTOS]: () => respuestaOk(PEDIDOS_LISTOS) }),
+  });
+
+  const tarjetas = contexto.documento.querySelectorAll('#contenido-listos .tarjeta-pedido');
+  assert.equal(tarjetas.length, 2);
+  assert.equal(tarjetas[0].querySelector('.tarjeta-pedido-numero').textContent, 'Pedido #8');
+  assert.equal(tarjetas[0].querySelector('.insignia-franja').textContent, 'Almuerzo');
+  assert.equal(tarjetas[0].querySelector('.tarjeta-pedido-huesped').textContent, 'Huésped #42');
+  assert.equal(tarjetas[0].querySelector('.tarjeta-pedido-items').textContent, 'Bandeja paisa x 1');
+});
+
+test('sin pedidos listos muestra el aviso de lista vacía', async () => {
+  const contexto = await montarPanelMesero({ rutas: rutasBase({ [RUTA_LISTOS]: () => respuestaOk([]) }) });
+
+  assert.match(contexto.documento.querySelector('#contenido-listos .texto-vacio').textContent, /no hay pedidos listos/i);
+});
+
+test('marcar entregado hace PATCH y quita la tarjeta de la lista', async () => {
+  const contexto = await montarPanelMesero({
+    rutas: rutasBase({
+      [RUTA_LISTOS]: () => respuestaOk(PEDIDOS_LISTOS),
+      '/api/pedidos/8/estado': () => respuestaOk(Object.assign({}, PEDIDOS_LISTOS[0], { estado: 'entregado' })),
+    }),
+  });
+
+  const tarjeta = contexto.documento.querySelector('#contenido-listos .tarjeta-pedido[data-pedido-id="8"]');
+  tarjeta.querySelector('button').dispatchEvent(new contexto.dom.window.Event('click', { bubbles: true }));
+  await contexto.dom.window.Comun._meseroAccionListos;
+
+  const patch = contexto.llamadas.find((llamada) => llamada.ruta === '/api/pedidos/8/estado');
+  assert.equal(patch.opciones.method, 'PATCH');
+  assert.deepEqual(JSON.parse(patch.opciones.body), { estado: 'entregado' });
+
+  assert.equal(contexto.documento.querySelector('#contenido-listos .tarjeta-pedido[data-pedido-id="8"]'), null);
+  assert.notEqual(contexto.documento.querySelector('#contenido-listos .tarjeta-pedido[data-pedido-id="9"]'), null);
+});
+
+test('un error de negocio al marcar entregado se muestra tal cual y no quita la tarjeta', async () => {
+  const mensajeBackend = 'La transición de listo a entregado no está permitida';
+  const contexto = await montarPanelMesero({
+    rutas: rutasBase({
+      [RUTA_LISTOS]: () => respuestaOk([PEDIDOS_LISTOS[0]]),
+      '/api/pedidos/8/estado': () => respuestaError(409, 'TRANSICION_INVALIDA', mensajeBackend),
+    }),
+  });
+
+  const tarjeta = contexto.documento.querySelector('#contenido-listos .tarjeta-pedido[data-pedido-id="8"]');
+  tarjeta.querySelector('button').dispatchEvent(new contexto.dom.window.Event('click', { bubbles: true }));
+  await contexto.dom.window.Comun._meseroAccionListos;
+
+  assert.equal(contexto.documento.getElementById('error-listos').textContent, mensajeBackend);
+  assert.notEqual(contexto.documento.querySelector('#contenido-listos .tarjeta-pedido[data-pedido-id="8"]'), null);
+  assert.equal(tarjeta.querySelector('button').disabled, false, 'se rehabilita tras el error');
 });

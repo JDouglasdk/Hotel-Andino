@@ -1,7 +1,7 @@
 window.Comun = window.Comun || {};
 
 window.Comun.dialogo = {
-  abrir({ documento = document, mensaje, titulo, soloCerrar = false, textoConfirmar = 'Sí, confirmar', alConfirmar }) {
+  abrir({ documento = document, mensaje, titulo, soloCerrar = false, textoConfirmar = 'Sí, confirmar', alConfirmar, alCerrar }) {
     const overlay = documento.createElement('div');
     overlay.className = 'dialogo-overlay';
 
@@ -19,7 +19,14 @@ window.Comun.dialogo = {
     function cerrar() {
       overlay.remove();
     }
-    botonCerrar.addEventListener('click', cerrar);
+    // Cerrar sin confirmar (× o Cancelar) es distinto de confirmar: quien
+    // llamó puede necesitar deshacer un estado que preparó antes de abrir
+    // el diálogo (ej. rehabilitar botones que deshabilitó preventivamente).
+    function cerrarSinConfirmar() {
+      cerrar();
+      if (alCerrar) alCerrar();
+    }
+    botonCerrar.addEventListener('click', cerrarSinConfirmar);
     tarjeta.append(botonCerrar);
 
     if (titulo) {
@@ -42,7 +49,7 @@ window.Comun.dialogo = {
       botonCancelar.type = 'button';
       botonCancelar.className = 'dialogo-cancelar';
       botonCancelar.textContent = 'Cancelar';
-      botonCancelar.addEventListener('click', cerrar);
+      botonCancelar.addEventListener('click', cerrarSinConfirmar);
 
       const botonConfirmar = documento.createElement('button');
       botonConfirmar.type = 'button';
