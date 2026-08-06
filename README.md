@@ -5,9 +5,6 @@ derecho de comidas diarias de cada huésped según su tipo de reserva,
 registra comandas con descuento automático de inventario, y calcula el
 flujo de caja diario.
 
-Reto de formación (SENA) — ver `docs/decisiones.md` (alcance, stack y
-reparto de trabajo ya decididos).
-
 Backend REST en Node.js/Express + SQLite (`better-sqlite3`), frontend en
 HTML/CSS/JS puro sin framework, servidos desde la misma app Express —
 mismo patrón que `restaurante-app`, reciclado donde aplica.
