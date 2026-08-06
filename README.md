@@ -5,8 +5,8 @@ derecho de comidas diarias de cada huésped según su tipo de reserva,
 registra comandas con descuento automático de inventario, y calcula el
 flujo de caja diario.
 
-Reto de formación (SENA) — ver `doc-hotelApp.docx` (ficha técnica original)
-y `docs/decisiones.md` (alcance, stack y reparto de trabajo ya decididos).
+Reto de formación (SENA) — ver `docs/decisiones.md` (alcance, stack y
+reparto de trabajo ya decididos).
 
 Backend REST en Node.js/Express + SQLite (`better-sqlite3`), frontend en
 HTML/CSS/JS puro sin framework, servidos desde la misma app Express —
@@ -27,7 +27,8 @@ header persistente en los 4 paneles, cada uno con su lógica de negocio
 real (no placeholder):
 
 - **Mesero**: identifica huésped por documento, registra comanda por
-  franja con validación real de derecho de comidas.
+  franja con validación real de derecho de comidas, y marca como
+  entregados los pedidos que cocina dejó listos.
 - **Cocina**: cola de comandas (`pendiente`/`en_preparacion`) con
   transición de estado y cancelación confirmada.
 - **Jefe de caja**: caja del día, platos servidos por franja e
@@ -63,7 +64,16 @@ cd frontend && npm test
 
 Mismo formato en ambos (`node --test`). Backend: 78 tests de integración
 en verde (auth/usuarios, menú, huéspedes, pedidos, ingredientes/recetas,
-derecho de comidas, inventario, caja diaria). Frontend: 95 tests
+derecho de comidas, inventario, caja diaria). Frontend: 103 tests
 unitarios en verde (`node --test` + `jsdom`) — cimientos compartidos
 (dialogo.js, clienteApi.js, sesion.js, header.js, panel.js), login, y
 los 4 paneles de rol con su lógica de negocio.
+
+## Próximos pasos
+
+Bitácora de movimientos de inventario: reemplaza el ajuste absoluto de
+stock por un registro histórico (`movimiento_ingrediente`, con
+motivo/usuario/fecha) y lo usa para restituir el stock exacto cuando se
+cancela un pedido — hoy una cancelación no devuelve el inventario ya
+descontado. Diseño y plan de implementación ya cerrados, pendiente de
+construir.
