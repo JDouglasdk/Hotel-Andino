@@ -407,3 +407,66 @@ test('crear un pedido con stock insuficiente responde 409 STOCK_INSUFICIENTE', a
   const pedidos = await meseroAgente.get('/api/pedidos?estado=pendiente');
   assert.ok(pedidos.body.some((p) => p.huespedId === huesped.body.id));
 });
+
+test('cancelar un pedido restituye exactamente el stock consumido, incluso si la receta cambió después', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const huesped = await adminAgente.post('/api/huespedes').send({ documento: '123123', nombreCompleto: 'Rita Ruiz', tipoHuesped: 'vip' });
+  const categoria = await adminAgente.post('/api/categorias').send({ nombre: 'Entradas' });
+  const plato = await adminAgente.post('/api/platos').send({ categoriaId: categoria.body.id, nombre: 'Empanadas', precio: 8000 });
+  const harina = await adminAgente.post('/api/ingredientes').send({ nombre: 'Harina', cantidadStock: 100, unidadMedida: 'kg' });
+  const queso = await adminAgente.post('/api/ingredientes').send({ nombre: 'Queso', cantidadStock: 100, unidadMedida: 'kg' });
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({
+    items: [
+      { ingredienteId: harina.body.id, cantidadRequerida: 3 },
+      { ingredienteId: queso.body.id, cantidadRequerida: 2 },
+    ],
+  });
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+
+  const creado = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.body.id, franja: 'almuerzo', items: [{ platoId: plato.body.id, cantidad: 1 }] });
+  // Stock tras crear: harina 97, queso 98.
+
+  // La receta cambia DESPUÉS de crear el pedido — la restitución debe usar
+  // lo que el pedido realmente consumió (3/2), no la receta nueva (1/1).
+  await adminAgente.post(`/api/platos/${plato.body.id}/receta`).send({
+    items: [
+      { ingredienteId: harina.body.id, cantidadRequerida: 1 },
+      { ingredienteId: queso.body.id, cantidadRequerida: 1 },
+    ],
+  });
+
+  await meseroAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'cancelado' });
+
+  const ingredientes = await adminAgente.get('/api/ingredientes');
+  assert.equal(ingredientes.body.find((i) => i.id === harina.body.id).cantidadStock, 100);
+  assert.equal(ingredientes.body.find((i) => i.id === queso.body.id).cantidadStock, 100);
+
+  const movimientosHarina = await adminAgente.get(`/api/ingredientes/${harina.body.id}/movimientos`);
+  const restitucion = movimientosHarina.body.find((m) => m.motivo === 'restitucion_cancelacion');
+  const consumo = movimientosHarina.body.find((m) => m.motivo === 'consumo_comanda');
+  assert.equal(restitucion.delta, 3);
+  assert.equal(restitucion.movimientoOrigenId, consumo.id);
+  assert.equal(restitucion.pedidoId, creado.body.id);
+});
+
+test('cancelar un pedido sin movimientos de consumo previos no falla ni cambia el stock', async () => {
+  const { app, conexion, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const { huesped, plato } = await crearHuespedYPlato(adminAgente);
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+  const creado = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.id, franja: 'almuerzo', items: [{ platoId: plato.id, cantidad: 1 }] });
+
+  const ingredientesAntes = await adminAgente.get('/api/ingredientes');
+
+  // Simula un pedido creado antes de que existiera la bitácora: sin filas
+  // consumo_comanda propias.
+  conexion.prepare('DELETE FROM movimiento_ingrediente WHERE pedido_id = ?').run(creado.body.id);
+
+  const respuesta = await meseroAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'cancelado' });
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.body.estado, 'cancelado');
+  const ingredientesDespues = await adminAgente.get('/api/ingredientes');
+  assert.deepEqual(ingredientesDespues.body, ingredientesAntes.body);
+});

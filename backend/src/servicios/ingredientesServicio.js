@@ -69,6 +69,29 @@ function crearIngredientesServicio({ ingredientesRepositorio, recetasRepositorio
       return movimientosIngredienteRepositorio.listarPorIngrediente(id);
     },
 
+    // Revierte exactamente lo que este pedido consumió (bitácora, no
+    // receta actual — ver docs/superpowers/specs/2026-08-06-bitacora-inventario-design.md).
+    // Todos los ingredientes del pedido se restituyen en una sola
+    // transacción. Si el pedido no tiene consumo_comanda propio (dato
+    // preexistente a esta feature), no hace nada — no hay forma de saber
+    // qué se consumió realmente sin ese historial.
+    restituirConsumosDePedido({ pedidoId, usuarioId }) {
+      const consumos = movimientosIngredienteRepositorio.listarPorPedido(pedidoId, 'consumo_comanda');
+      if (consumos.length === 0) return;
+      conexion.transaction(() => {
+        for (const consumo of consumos) {
+          aplicarMovimiento({
+            id: consumo.ingredienteId,
+            delta: -consumo.delta,
+            motivo: 'restitucion_cancelacion',
+            usuarioId,
+            pedidoId,
+            movimientoOrigenId: consumo.id,
+          });
+        }
+      })();
+    },
+
     listarIngredientes() {
       return ingredientesRepositorio.listarTodos();
     },

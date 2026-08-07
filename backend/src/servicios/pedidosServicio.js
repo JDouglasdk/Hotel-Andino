@@ -57,7 +57,7 @@ function crearPedidosServicio({ pedidosRepositorio, huespedesRepositorio, platos
       return pedido;
     },
 
-    cambiarEstadoPedido({ id, nuevoEstado, rol }) {
+    cambiarEstadoPedido({ id, nuevoEstado, rol, usuarioId }) {
       const pedido = verificarPedidoExiste(id);
       const clave = `${pedido.estado}->${nuevoEstado}`;
       const rolesPermitidos = TRANSICIONES_PERMITIDAS[clave];
@@ -67,7 +67,11 @@ function crearPedidosServicio({ pedidosRepositorio, huespedesRepositorio, platos
       if (!rolesPermitidos.includes(rol)) {
         throw new ErrorDeNegocio('No tiene permiso para esta acción', { codigo: 'NO_AUTORIZADO', status: 403 });
       }
-      return pedidosRepositorio.cambiarEstado({ id, estado: nuevoEstado });
+      const actualizado = pedidosRepositorio.cambiarEstado({ id, estado: nuevoEstado });
+      if (nuevoEstado === 'cancelado') {
+        inventarioServicio.restituirPorPedido({ pedidoId: id, usuarioId });
+      }
+      return actualizado;
     },
 
     obtenerPedidoPorId(id) {

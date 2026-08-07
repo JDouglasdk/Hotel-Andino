@@ -8,6 +8,9 @@ function crearInventarioServicio({ ingredientesServicio, conexion }) {
       });
       ejecutar();
     },
+    restituirPorPedido({ pedidoId, usuarioId }) {
+      ingredientesServicio.restituirConsumosDePedido({ pedidoId, usuarioId });
+    },
   };
 }
 

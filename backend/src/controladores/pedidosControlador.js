@@ -21,6 +21,7 @@ function crearPedidosControlador({ pedidosServicio }) {
         id: Number(req.params.id),
         nuevoEstado: req.body.estado,
         rol: req.usuario.rol,
+        usuarioId: req.usuario.id,
       });
       res.json(pedido);
     },
