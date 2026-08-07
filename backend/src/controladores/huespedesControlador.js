@@ -6,6 +6,7 @@ function crearHuespedesControlador({ huespedesServicio }) {
         nombreCompleto: req.body.nombreCompleto,
         telefono: req.body.telefono,
         tipoHuesped: req.body.tipoHuesped,
+        usuarioId: req.usuario.id,
       });
       res.status(201).json(huesped);
     },

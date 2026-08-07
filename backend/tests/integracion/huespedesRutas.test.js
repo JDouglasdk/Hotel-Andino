@@ -74,3 +74,14 @@ test('GET /api/huespedes con documento inexistente responde 404', async () => {
   assert.equal(respuesta.status, 404);
   assert.equal(respuesta.body.error.codigo, 'HUESPED_NO_ENCONTRADO');
 });
+
+test('crear un huésped asigna creadoPor al mesero que lo crea', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const agente = await iniciarSesionMesero(app, contenedor);
+  const yo = await agente.get('/api/auth/yo');
+
+  const respuesta = await agente.post('/api/huespedes').send({ documento: '123456', nombreCompleto: 'Carlos Ruiz', tipoHuesped: 'ordinario' });
+
+  assert.equal(respuesta.status, 201);
+  assert.equal(respuesta.body.creadoPor, yo.body.id);
+});

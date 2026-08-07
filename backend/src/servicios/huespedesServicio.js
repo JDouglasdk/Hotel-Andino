@@ -2,11 +2,11 @@ const { ErrorDeNegocio } = require('../utilidades/errores');
 
 function crearHuespedesServicio({ huespedesRepositorio }) {
   return {
-    crearHuesped({ documento, nombreCompleto, telefono, tipoHuesped }) {
+    crearHuesped({ documento, nombreCompleto, telefono, tipoHuesped, usuarioId }) {
       if (huespedesRepositorio.buscarPorDocumento(documento)) {
         throw new ErrorDeNegocio(`Ya existe un huésped con el documento ${documento}`, { codigo: 'HUESPED_DUPLICADO', status: 409 });
       }
-      return huespedesRepositorio.crear({ documento, nombreCompleto, telefono, tipoHuesped });
+      return huespedesRepositorio.crear({ documento, nombreCompleto, telefono, tipoHuesped, usuarioId });
     },
 
     buscarHuespedPorDocumento(documento) {

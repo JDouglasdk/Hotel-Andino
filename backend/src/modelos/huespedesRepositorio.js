@@ -1,7 +1,7 @@
 function crearHuespedesRepositorio(conexion) {
   const insertar = conexion.prepare(`
-    INSERT INTO huespedes (documento, nombre_completo, telefono, tipo_huesped, creado_en)
-    VALUES (@documento, @nombreCompleto, @telefono, @tipoHuesped, @creadoEn)
+    INSERT INTO huespedes (documento, nombre_completo, telefono, tipo_huesped, creado_en, creado_por)
+    VALUES (@documento, @nombreCompleto, @telefono, @tipoHuesped, @creadoEn, @creadoPor)
   `);
   const buscarPorIdStmt = conexion.prepare('SELECT * FROM huespedes WHERE id = ?');
   const buscarPorDocumentoStmt = conexion.prepare('SELECT * FROM huespedes WHERE documento = ?');
@@ -15,6 +15,7 @@ function crearHuespedesRepositorio(conexion) {
       telefono: fila.telefono,
       tipoHuesped: fila.tipo_huesped,
       creadoEn: fila.creado_en,
+      creadoPor: fila.creado_por,
     };
   }
 
@@ -23,9 +24,9 @@ function crearHuespedesRepositorio(conexion) {
   }
 
   return {
-    crear({ documento, nombreCompleto, telefono, tipoHuesped }) {
+    crear({ documento, nombreCompleto, telefono, tipoHuesped, usuarioId }) {
       const creadoEn = new Date().toISOString();
-      const resultado = insertar.run({ documento, nombreCompleto, telefono: telefono ?? null, tipoHuesped, creadoEn });
+      const resultado = insertar.run({ documento, nombreCompleto, telefono: telefono ?? null, tipoHuesped, creadoEn, creadoPor: usuarioId });
       return obtenerPorId(resultado.lastInsertRowid);
     },
     buscarPorId(id) {
