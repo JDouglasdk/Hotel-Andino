@@ -12,6 +12,14 @@ window.Comun = window.Comun || {};
     jefeDeCaja: 'Jefe de caja',
   };
 
+  const ETIQUETAS_MOTIVO_MOVIMIENTO = {
+    compra: 'Compra',
+    merma: 'Merma',
+    ajuste: 'Ajuste',
+    consumo_comanda: 'Consumo (pedido)',
+    restitucion_cancelacion: 'Restitución (cancelación)',
+  };
+
   // El usuario con la sesión abierta: se usa para no ofrecerle acciones que
   // lo dejarían fuera del sistema (desactivar su propia cuenta).
   let usuarioActual = null;
@@ -494,24 +502,36 @@ window.Comun = window.Comun || {};
 
   // --- Ingredientes -----------------------------------------------------
 
-  function crearControlDeStock(ingrediente) {
+  function crearControlDeMovimiento(ingrediente) {
     const grupo = document.createElement('div');
     grupo.className = 'control-stock';
 
-    const entrada = document.createElement('input');
-    entrada.type = 'number';
-    entrada.className = 'entrada-numerica entrada-stock';
-    entrada.min = '0';
-    entrada.step = '0.01';
-    entrada.value = formatearCantidad(ingrediente.cantidadStock);
-    entrada.setAttribute('aria-label', 'Nuevo stock de ' + ingrediente.nombre);
+    const entradaDelta = document.createElement('input');
+    entradaDelta.type = 'number';
+    entradaDelta.className = 'entrada-numerica entrada-stock';
+    entradaDelta.step = '0.01';
+    entradaDelta.placeholder = '+/-';
+    entradaDelta.setAttribute('aria-label', 'Cantidad a sumar o restar del stock de ' + ingrediente.nombre);
 
-    const boton = crearBoton('Actualizar stock', 'boton boton--secundario', () => {
-      window.Comun._adminAccion = actualizarStock(ingrediente, entrada, boton);
+    const selectMotivo = document.createElement('select');
+    selectMotivo.setAttribute('aria-label', 'Motivo del movimiento de ' + ingrediente.nombre);
+    const opcionVacia = document.createElement('option');
+    opcionVacia.value = '';
+    opcionVacia.textContent = 'Motivo…';
+    selectMotivo.append(opcionVacia);
+    ['compra', 'merma', 'ajuste'].forEach((motivo) => {
+      const opcion = document.createElement('option');
+      opcion.value = motivo;
+      opcion.textContent = ETIQUETAS_MOTIVO_MOVIMIENTO[motivo];
+      selectMotivo.append(opcion);
     });
-    boton.dataset.accion = 'actualizar-stock';
 
-    grupo.append(entrada, boton);
+    const boton = crearBoton('Registrar movimiento', 'boton boton--secundario', () => {
+      window.Comun._adminAccion = registrarMovimientoDeIngrediente(ingrediente, entradaDelta, selectMotivo, boton);
+    });
+    boton.dataset.accion = 'registrar-movimiento';
+
+    grupo.append(entradaDelta, selectMotivo, boton);
     return grupo;
   }
 
@@ -520,13 +540,34 @@ window.Comun = window.Comun || {};
       ingrediente.nombre,
       formatearCantidad(ingrediente.cantidadStock),
       ingrediente.unidadMedida,
-      crearControlDeStock(ingrediente),
+      crearControlDeMovimiento(ingrediente),
     ];
+  }
+
+  function poblarSelectDeHistorial() {
+    const select = elemento('ingrediente-historial');
+    vaciar(select);
+    if (ingredientes.length === 0) {
+      const opcion = document.createElement('option');
+      opcion.value = '';
+      opcion.textContent = 'No hay ingredientes';
+      select.append(opcion);
+      select.disabled = true;
+      return;
+    }
+    select.disabled = false;
+    ingredientes.forEach((ingrediente) => {
+      const opcion = document.createElement('option');
+      opcion.value = String(ingrediente.id);
+      opcion.textContent = ingrediente.nombre;
+      select.append(opcion);
+    });
   }
 
   function renderizarIngredientes() {
     const contenedor = elemento('contenido-ingredientes');
     vaciar(contenedor);
+    poblarSelectDeHistorial();
 
     if (ingredientes.length === 0) {
       contenedor.append(crearTextoVacio('No hay ingredientes registrados.'));
@@ -534,7 +575,7 @@ window.Comun = window.Comun || {};
     }
 
     contenedor.append(crearTabla(
-      ['Ingrediente', 'Stock actual', 'Unidad de medida', 'Nuevo stock'],
+      ['Ingrediente', 'Stock actual', 'Unidad de medida', 'Registrar movimiento'],
       ingredientes.map(celdasDeIngrediente),
       (fila, indice) => { fila.dataset.ingredienteId = String(ingredientes[indice].id); },
     ));
@@ -557,25 +598,29 @@ window.Comun = window.Comun || {};
     fila.replaceWith(nueva);
   }
 
-  // El PATCH reemplaza el valor absoluto del stock, no suma ni resta.
-  async function actualizarStock(ingrediente, entrada, boton) {
+  async function registrarMovimientoDeIngrediente(ingrediente, entradaDelta, selectMotivo, boton) {
     ocultarBanner('error-ingredientes');
     ocultarBanner('exito-ingredientes');
 
-    const valor = entrada.value.trim();
-    const cantidadStock = Number(valor);
-    if (valor === '' || !Number.isFinite(cantidadStock) || cantidadStock < 0) {
-      mostrarBanner('error-ingredientes', 'Escribe una cantidad de stock válida (cero o mayor).');
+    const valor = entradaDelta.value.trim();
+    const delta = Number(valor);
+    if (valor === '' || !Number.isFinite(delta) || delta === 0) {
+      mostrarBanner('error-ingredientes', 'Escribe una cantidad distinta de cero (positiva para sumar, negativa para restar).');
+      return;
+    }
+    const motivo = selectMotivo.value;
+    if (!motivo) {
+      mostrarBanner('error-ingredientes', 'Selecciona un motivo para el movimiento.');
       return;
     }
 
     boton.disabled = true;
     try {
-      const actualizado = await enviarJson('/api/ingredientes/' + ingrediente.id + '/stock', 'PATCH', { cantidadStock });
-      const registro = actualizado || Object.assign({}, ingrediente, { cantidadStock });
+      const movimiento = await enviarJson('/api/ingredientes/' + ingrediente.id + '/movimientos', 'POST', { delta, motivo });
+      const registro = Object.assign({}, ingrediente, { cantidadStock: movimiento.cantidadResultante });
       reemplazarPorId(ingredientes, ingrediente.id, registro);
       repintarFilaDeIngrediente(registro);
-      mostrarBanner('exito-ingredientes', 'Stock actualizado: ' + ingrediente.nombre + '.');
+      mostrarBanner('exito-ingredientes', 'Movimiento registrado: ' + ingrediente.nombre + '.');
     } catch (error) {
       boton.disabled = false;
       mostrarError('error-ingredientes', error);
@@ -627,6 +672,57 @@ window.Comun = window.Comun || {};
     }
   }
 
+  // --- Historial de movimientos -------------------------------------------
+
+  function formatearFecha(valor) {
+    const fecha = new Date(valor);
+    return Number.isNaN(fecha.getTime()) ? String(valor) : fecha.toLocaleString('es-CO');
+  }
+
+  function formatearDelta(valor) {
+    const numero = Number(valor);
+    return (numero > 0 ? '+' : '') + formatearCantidad(numero);
+  }
+
+  function renderizarHistorial(movimientos) {
+    const contenedor = elemento('contenido-historial-movimientos');
+    vaciar(contenedor);
+
+    if (movimientos.length === 0) {
+      contenedor.append(crearTextoVacio('Este ingrediente no tiene movimientos registrados.'));
+      return;
+    }
+
+    contenedor.append(crearTabla(
+      ['Fecha', 'Movimiento', 'Motivo', 'Usuario', 'Stock resultante'],
+      movimientos.map((movimiento) => [
+        formatearFecha(movimiento.creadoEn),
+        formatearDelta(movimiento.delta),
+        ETIQUETAS_MOTIVO_MOVIMIENTO[movimiento.motivo] || movimiento.motivo,
+        movimiento.usuarioNombre,
+        formatearCantidad(movimiento.cantidadResultante),
+      ]),
+    ));
+  }
+
+  async function verHistorialDeIngrediente() {
+    ocultarBanner('error-historial-movimientos');
+    const id = elemento('ingrediente-historial').value;
+    if (!id) return;
+
+    const boton = elemento('boton-ver-historial');
+    boton.disabled = true;
+    try {
+      const movimientos = await window.Comun.clienteApi.peticion('/api/ingredientes/' + id + '/movimientos');
+      renderizarHistorial(Array.isArray(movimientos) ? movimientos : []);
+    } catch (error) {
+      vaciar(elemento('contenido-historial-movimientos'));
+      mostrarError('error-historial-movimientos', error);
+    } finally {
+      boton.disabled = false;
+    }
+  }
+
   // --- Arranque ---------------------------------------------------------
 
   // Las categorías se cargan antes que los platos: la tabla de platos cruza
@@ -643,6 +739,9 @@ window.Comun = window.Comun || {};
     elemento('formulario-categoria').addEventListener('submit', manejarCrearCategoria);
     elemento('formulario-plato').addEventListener('submit', manejarCrearPlato);
     elemento('formulario-ingrediente').addEventListener('submit', manejarCrearIngrediente);
+    elemento('boton-ver-historial').addEventListener('click', () => {
+      window.Comun._adminAccion = verHistorialDeIngrediente();
+    });
     sincronizarFormularioDePlato();
 
     // Cada sección atrapa su propio error: un fallo no tumba a las demás.

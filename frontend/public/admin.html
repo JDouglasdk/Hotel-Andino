@@ -154,6 +154,17 @@
         <button type="submit" id="boton-crear-ingrediente" class="boton boton--primario">Crear ingrediente</button>
       </form>
     </section>
+
+    <section class="seccion-panel" id="seccion-historial-movimientos">
+      <h2>Movimientos de inventario</h2>
+      <p id="error-historial-movimientos" class="banner-error" hidden></p>
+      <div class="campo">
+        <label for="ingrediente-historial">Ingrediente</label>
+        <select id="ingrediente-historial"></select>
+      </div>
+      <button type="button" id="boton-ver-historial" class="boton boton--secundario">Ver historial</button>
+      <div id="contenido-historial-movimientos"></div>
+    </section>
   </main>
 
   <script src="/js/comun/dialogo.js" defer></script>

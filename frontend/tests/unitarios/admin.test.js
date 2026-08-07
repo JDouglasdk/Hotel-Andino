@@ -137,12 +137,13 @@ test('admin.html tiene los contenedores y formularios que admin.js necesita', ()
     'error-platos', 'exito-platos',
     'contenido-ingredientes', 'formulario-ingrediente', 'nombre-ingrediente', 'cantidad-ingrediente',
     'unidad-ingrediente', 'boton-crear-ingrediente', 'error-ingredientes', 'exito-ingredientes',
+    'ingrediente-historial', 'boton-ver-historial', 'contenido-historial-movimientos', 'error-historial-movimientos',
   ].forEach((id) => {
     assert.notEqual(doc.getElementById(id), null, `falta #${id} en admin.html`);
   });
 
   // Las tablas y el selector de categorías los llena admin.js: el HTML va vacío.
-  ['contenido-usuarios', 'contenido-categorias', 'contenido-platos', 'contenido-ingredientes']
+  ['contenido-usuarios', 'contenido-categorias', 'contenido-platos', 'contenido-ingredientes', 'contenido-historial-movimientos']
     .forEach((id) => assert.equal(doc.getElementById(id).children.length, 0, `#${id} debía ir vacío`));
   assert.equal(doc.getElementById('categoria-plato').children.length, 0);
 });
@@ -518,42 +519,133 @@ test('crear un ingrediente envía la cantidad como número y recarga la tabla', 
   assert.match(textoDe(documento, 'exito-ingredientes'), /panela/i);
 });
 
-test('actualizar el stock de un ingrediente hace PATCH con el valor absoluto', async () => {
+test('registrar un movimiento de inventario hace POST con delta y motivo', async () => {
   const rutas = rutasPorDefecto({
-    '/api/ingredientes/3/stock': () => respuestaOk(Object.assign({}, INGREDIENTES[0], { cantidadStock: 50 })),
+    '/api/ingredientes/3/movimientos': (opciones) => {
+      if (esMetodo(opciones, 'POST')) {
+        return respuestaOk({
+          id: 99, ingredienteId: 3, delta: 20, motivo: 'compra', usuarioId: 1,
+          pedidoId: null, movimientoOrigenId: null, cantidadResultante: 47.9, creadoEn: '2026-08-06T10:00:00.000Z',
+        }, 201);
+      }
+      return respuestaOk([]);
+    },
   });
   const { dom, documento, llamadas } = await montarPanelAdmin(rutas);
 
   const fila = filaPorDato(documento, 'contenido-ingredientes', 'ingrediente-id', '3');
-  const entrada = fila.querySelector('input');
-  assert.equal(entrada.value, '27.9', 'el input arranca con el stock actual redondeado');
-
-  entrada.value = '50';
-  clic(dom, fila.querySelector('button[data-accion="actualizar-stock"]'));
+  const entradas = fila.querySelectorAll('input, select');
+  const entradaDelta = entradas[0];
+  const selectMotivo = entradas[1];
+  entradaDelta.value = '20';
+  selectMotivo.value = 'compra';
+  clic(dom, fila.querySelector('button[data-accion="registrar-movimiento"]'));
   await dom.window.Comun._adminAccion;
 
-  const patch = ultimaLlamada(llamadas);
-  assert.equal(patch.ruta, '/api/ingredientes/3/stock');
-  assert.equal(patch.opciones.method, 'PATCH');
-  assert.deepEqual(JSON.parse(patch.opciones.body), { cantidadStock: 50 });
+  const post = llamadas.find((llamada) => llamada.ruta === '/api/ingredientes/3/movimientos' && esMetodo(llamada.opciones, 'POST'));
+  assert.deepEqual(JSON.parse(post.opciones.body), { delta: 20, motivo: 'compra' });
 
-  assert.deepEqual(filasDe(documento, 'contenido-ingredientes')[0].slice(0, 3), ['Arroz', '50', 'kg']);
+  assert.deepEqual(filasDe(documento, 'contenido-ingredientes')[0].slice(0, 3), ['Arroz', '47.9', 'kg']);
   assert.match(textoDe(documento, 'exito-ingredientes'), /arroz/i);
   assert.equal(documento.getElementById('error-ingredientes').hidden, true);
 });
 
-test('un stock vacío no llega al backend y avisa en la sección', async () => {
+test('un movimiento con delta 0 no llega al backend y avisa en la sección', async () => {
   const { dom, documento, llamadas } = await montarPanelAdmin();
   const llamadasIniciales = llamadas.length;
 
   const fila = filaPorDato(documento, 'contenido-ingredientes', 'ingrediente-id', '3');
-  fila.querySelector('input').value = '';
-  clic(dom, fila.querySelector('button[data-accion="actualizar-stock"]'));
+  const entradas = fila.querySelectorAll('input, select');
+  entradas[0].value = '0';
+  entradas[1].value = 'compra';
+  clic(dom, fila.querySelector('button[data-accion="registrar-movimiento"]'));
   await dom.window.Comun._adminAccion;
 
   assert.equal(llamadas.length, llamadasIniciales, 'no debía hacerse ninguna petición');
   assert.equal(documento.getElementById('error-ingredientes').hidden, false);
-  assert.match(textoDe(documento, 'error-ingredientes'), /cantidad de stock válida/i);
+  assert.match(textoDe(documento, 'error-ingredientes'), /distinta de cero/i);
+});
+
+test('un movimiento sin motivo seleccionado no llega al backend y avisa en la sección', async () => {
+  const { dom, documento, llamadas } = await montarPanelAdmin();
+  const llamadasIniciales = llamadas.length;
+
+  const fila = filaPorDato(documento, 'contenido-ingredientes', 'ingrediente-id', '3');
+  const entradas = fila.querySelectorAll('input, select');
+  entradas[0].value = '10';
+  clic(dom, fila.querySelector('button[data-accion="registrar-movimiento"]'));
+  await dom.window.Comun._adminAccion;
+
+  assert.equal(llamadas.length, llamadasIniciales, 'no debía hacerse ninguna petición');
+  assert.equal(documento.getElementById('error-ingredientes').hidden, false);
+  assert.match(textoDe(documento, 'error-ingredientes'), /selecciona un motivo/i);
+});
+
+test('un 409 STOCK_INSUFICIENTE al registrar un movimiento se muestra y no cambia la fila', async () => {
+  const rutas = rutasPorDefecto({
+    '/api/ingredientes/3/movimientos': () => respuestaError(409, 'STOCK_INSUFICIENTE', 'Stock insuficiente de "Arroz" (disponible: 27.9 kg)'),
+  });
+  const { dom, documento } = await montarPanelAdmin(rutas);
+
+  const fila = filaPorDato(documento, 'contenido-ingredientes', 'ingrediente-id', '3');
+  const entradas = fila.querySelectorAll('input, select');
+  entradas[0].value = '-50';
+  entradas[1].value = 'merma';
+  clic(dom, fila.querySelector('button[data-accion="registrar-movimiento"]'));
+  await dom.window.Comun._adminAccion;
+
+  assert.equal(documento.getElementById('error-ingredientes').hidden, false);
+  assert.match(textoDe(documento, 'error-ingredientes'), /stock insuficiente/i);
+  assert.deepEqual(filasDe(documento, 'contenido-ingredientes')[0].slice(0, 3), ['Arroz', '27.9', 'kg']);
+});
+
+test('ver historial de un ingrediente hace GET y pinta las filas', async () => {
+  const rutas = rutasPorDefecto({
+    '/api/ingredientes/3/movimientos': () => respuestaOk([
+      { id: 2, ingredienteId: 3, delta: -5, motivo: 'merma', usuarioId: 1, usuarioNombre: 'Ana Ríos', pedidoId: null, movimientoOrigenId: null, cantidadResultante: 22.9, creadoEn: '2026-08-06T11:00:00.000Z' },
+      { id: 1, ingredienteId: 3, delta: 10, motivo: 'compra', usuarioId: 1, usuarioNombre: 'Ana Ríos', pedidoId: null, movimientoOrigenId: null, cantidadResultante: 27.9, creadoEn: '2026-08-06T10:00:00.000Z' },
+    ]),
+  });
+  const { dom, documento } = await montarPanelAdmin(rutas);
+
+  documento.getElementById('ingrediente-historial').value = '3';
+  clic(dom, documento.getElementById('boton-ver-historial'));
+  await dom.window.Comun._adminAccion;
+
+  const filas = filasDe(documento, 'contenido-historial-movimientos');
+  assert.equal(filas.length, 2);
+  assert.deepEqual(filas[0].slice(1, 5), ['-5', 'Merma', 'Ana Ríos', '22.9']);
+  assert.deepEqual(filas[1].slice(1, 5), ['+10', 'Compra', 'Ana Ríos', '27.9']);
+});
+
+test('un error de red al ver el historial no rompe el resto del panel', async () => {
+  const rutas = rutasPorDefecto({
+    '/api/ingredientes/3/movimientos': () => { throw new Error('fallo de red'); },
+  });
+  const { dom, documento } = await montarPanelAdmin(rutas);
+
+  documento.getElementById('ingrediente-historial').value = '3';
+  clic(dom, documento.getElementById('boton-ver-historial'));
+  await dom.window.Comun._adminAccion;
+
+  assert.equal(documento.getElementById('error-historial-movimientos').hidden, false);
+  assert.equal(documento.querySelector('#contenido-historial-movimientos table'), null);
+  // El resto del panel sigue intacto.
+  assert.equal(filasDe(documento, 'contenido-ingredientes').length, 2);
+});
+
+test('un delta vacío no llega al backend y avisa en la sección', async () => {
+  const { dom, documento, llamadas } = await montarPanelAdmin();
+  const llamadasIniciales = llamadas.length;
+
+  const fila = filaPorDato(documento, 'contenido-ingredientes', 'ingrediente-id', '3');
+  fila.querySelectorAll('input, select')[0].value = '';
+  clic(dom, fila.querySelector('button[data-accion="registrar-movimiento"]'));
+  await dom.window.Comun._adminAccion;
+
+  assert.equal(llamadas.length, llamadasIniciales, 'no debía hacerse ninguna petición');
+  assert.equal(documento.getElementById('error-ingredientes').hidden, false);
+  assert.match(textoDe(documento, 'error-ingredientes'), /distinta de cero/i);
 });
 
 test('el botón de envío queda deshabilitado mientras la petición está en curso', async () => {
