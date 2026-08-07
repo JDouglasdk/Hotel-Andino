@@ -165,3 +165,27 @@ test('GET .../movimientos de un ingrediente inexistente responde 404', async () 
   assert.equal(respuesta.status, 404);
   assert.equal(respuesta.body.error.codigo, 'INGREDIENTE_NO_ENCONTRADO');
 });
+
+test('crear un ingrediente asigna creadoPor y creadoEn', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const yo = await agente.get('/api/auth/yo');
+
+  const respuesta = await agente.post('/api/ingredientes').send({ nombre: 'Papa', cantidadStock: 50, unidadMedida: 'kg' });
+
+  assert.equal(respuesta.status, 201);
+  assert.equal(respuesta.body.creadoPor, yo.body.id);
+  assert.ok(respuesta.body.creadoEn);
+});
+
+test('registrar un movimiento de stock NO agrega actualizadoPor al ingrediente', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const creado = await agente.post('/api/ingredientes').send({ nombre: 'Papa', cantidadStock: 50, unidadMedida: 'kg' });
+
+  await agente.post(`/api/ingredientes/${creado.body.id}/movimientos`).send({ delta: 30, motivo: 'compra' });
+
+  const ingredientes = await agente.get('/api/ingredientes');
+  const ingrediente = ingredientes.body.find((i) => i.id === creado.body.id);
+  assert.equal(ingrediente.actualizadoPor, undefined);
+});

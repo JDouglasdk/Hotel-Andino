@@ -8,6 +8,7 @@ function crearIngredientesControlador({ ingredientesServicio }) {
         nombre: req.body.nombre,
         cantidadStock: req.body.cantidadStock,
         unidadMedida: req.body.unidadMedida,
+        usuarioId: req.usuario.id,
       });
       res.status(201).json(ingrediente);
     },

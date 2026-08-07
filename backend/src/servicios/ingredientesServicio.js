@@ -50,11 +50,11 @@ function crearIngredientesServicio({ ingredientesRepositorio, recetasRepositorio
   }
 
   return {
-    crearIngrediente({ nombre, cantidadStock, unidadMedida }) {
+    crearIngrediente({ nombre, cantidadStock, unidadMedida, usuarioId }) {
       if (ingredientesRepositorio.buscarPorNombre(nombre)) {
         throw new ErrorDeNegocio(`Ya existe un ingrediente con el nombre ${nombre}`, { codigo: 'INGREDIENTE_DUPLICADO', status: 409 });
       }
-      return ingredientesRepositorio.crear({ nombre, cantidadStock, unidadMedida });
+      return ingredientesRepositorio.crear({ nombre, cantidadStock, unidadMedida, usuarioId });
     },
 
     // Ajuste manual desde admin: `motivo` restringido a compra/merma/ajuste
