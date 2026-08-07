@@ -19,28 +19,28 @@ function validarRol(rol) {
 
 function crearUsuariosServicio({ usuariosRepositorio, autenticacionServicio }) {
   return {
-    crearUsuario({ nombreCompleto, correo, contrasena, rol }) {
+    crearUsuario({ nombreCompleto, correo, contrasena, rol, usuarioId }) {
       validarRol(rol);
       if (usuariosRepositorio.buscarPorCorreo(correo)) {
         throw new ErrorDeNegocio(`Ya existe un usuario con el correo ${correo}`, { codigo: 'CORREO_DUPLICADO', status: 409 });
       }
       const contrasenaHash = autenticacionServicio.hashearContrasena(contrasena);
-      return quitarContrasena(usuariosRepositorio.crear({ nombreCompleto, correo, contrasenaHash, rol }));
+      return quitarContrasena(usuariosRepositorio.crear({ nombreCompleto, correo, contrasenaHash, rol, usuarioId }));
     },
 
-    actualizarUsuario({ id, nombreCompleto, correo, rol }) {
+    actualizarUsuario({ id, nombreCompleto, correo, rol, usuarioId }) {
       validarRol(rol);
       if (!usuariosRepositorio.buscarPorId(id)) {
         throw new ErrorNoEncontrado(`El usuario ${id} no existe`);
       }
-      return quitarContrasena(usuariosRepositorio.actualizar({ id, nombreCompleto, correo, rol }));
+      return quitarContrasena(usuariosRepositorio.actualizar({ id, nombreCompleto, correo, rol, usuarioId }));
     },
 
-    cambiarEstadoUsuario({ id, activo }) {
+    cambiarEstadoUsuario({ id, activo, usuarioId }) {
       if (!usuariosRepositorio.buscarPorId(id)) {
         throw new ErrorNoEncontrado(`El usuario ${id} no existe`);
       }
-      return quitarContrasena(usuariosRepositorio.cambiarEstado({ id, activo }));
+      return quitarContrasena(usuariosRepositorio.cambiarEstado({ id, activo, usuarioId }));
     },
 
     listarUsuarios() {

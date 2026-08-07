@@ -73,3 +73,41 @@ test('crear un usuario sin contrasena responde 422 con DATOS_INVALIDOS', async (
   assert.equal(respuesta.status, 422);
   assert.equal(respuesta.body.error.codigo, 'DATOS_INVALIDOS');
 });
+
+test('crear un usuario asigna creadoPor al actor que lo crea', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const yo = await agente.get('/api/auth/yo');
+
+  const respuesta = await agente.post('/api/usuarios').send({ nombreCompleto: 'Ana', correo: 'ana@hotelandino.com', contrasena: 'clave123', rol: 'mesero' });
+
+  assert.equal(respuesta.status, 201);
+  assert.equal(respuesta.body.creadoPor, yo.body.id);
+  assert.equal(respuesta.body.actualizadoPor, null);
+});
+
+test('editar un usuario asigna actualizadoPor y actualizadoEn', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const yo = await agente.get('/api/auth/yo');
+  const creado = await agente.post('/api/usuarios').send({ nombreCompleto: 'Ana', correo: 'ana@hotelandino.com', contrasena: 'clave123', rol: 'mesero' });
+
+  const respuesta = await agente.put(`/api/usuarios/${creado.body.id}`).send({ nombreCompleto: 'Ana Actualizada', correo: 'ana@hotelandino.com', rol: 'mesero' });
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.body.actualizadoPor, yo.body.id);
+  assert.ok(respuesta.body.actualizadoEn);
+});
+
+test('desactivar un usuario asigna actualizadoPor y actualizadoEn', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const mesero = crearUsuarioDePrueba(contenedor, { nombreCompleto: 'Beto', correo: 'beto@hotelandino.com', contrasena: 'clave123', rol: 'mesero' });
+  const agente = await iniciarSesionAdmin(app);
+  const yo = await agente.get('/api/auth/yo');
+
+  const respuesta = await agente.patch(`/api/usuarios/${mesero.id}/estado`).send({ activo: false });
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.body.actualizadoPor, yo.body.id);
+  assert.ok(respuesta.body.actualizadoEn);
+});
