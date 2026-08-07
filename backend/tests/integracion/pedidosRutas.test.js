@@ -470,3 +470,78 @@ test('cancelar un pedido sin movimientos de consumo previos no falla ni cambia e
   const ingredientesDespues = await adminAgente.get('/api/ingredientes');
   assert.deepEqual(ingredientesDespues.body, ingredientesAntes.body);
 });
+
+test('transicionar un pedido dos veces registra dos transiciones en orden', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const { huesped, plato } = await crearHuespedYPlato(adminAgente);
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+  const cocinaAgente = await iniciarSesionRol(app, contenedor, 'cocina', 'cocina@hotelandino.com');
+  const creado = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.id, franja: 'almuerzo', items: [{ platoId: plato.id, cantidad: 1 }] });
+
+  await cocinaAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'en_preparacion' });
+  await cocinaAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'listo' });
+
+  const transiciones = contenedor.repositorios.pedidoTransicionRepositorio.listarPorPedido(creado.body.id);
+  assert.equal(transiciones.length, 2);
+  assert.equal(transiciones[0].estadoAnterior, 'pendiente');
+  assert.equal(transiciones[0].estadoNuevo, 'en_preparacion');
+  assert.equal(transiciones[1].estadoAnterior, 'en_preparacion');
+  assert.equal(transiciones[1].estadoNuevo, 'listo');
+});
+
+test('cancelar un pedido registra la transición y sigue restituyendo inventario', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const { huesped, plato } = await crearHuespedYPlato(adminAgente);
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+  const creado = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.id, franja: 'almuerzo', items: [{ platoId: plato.id, cantidad: 1 }] });
+
+  const respuesta = await meseroAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'cancelado' });
+
+  assert.equal(respuesta.status, 200);
+  const transiciones = contenedor.repositorios.pedidoTransicionRepositorio.listarPorPedido(creado.body.id);
+  assert.equal(transiciones.length, 1);
+  assert.equal(transiciones[0].estadoNuevo, 'cancelado');
+  const ingredientes = await adminAgente.get('/api/ingredientes');
+  const harina = ingredientes.body.find((i) => i.nombre === 'Harina');
+  assert.equal(harina.cantidadStock, 1000); // regresión: crearHuespedYPlato siembra 1000, receta consume 1
+});
+
+test('el usuario de la transición es quien hizo el cambio, no el creador del pedido', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const { huesped, plato } = await crearHuespedYPlato(adminAgente);
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+  const cocinaAgente = await iniciarSesionRol(app, contenedor, 'cocina', 'cocina@hotelandino.com');
+  const creado = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.id, franja: 'almuerzo', items: [{ platoId: plato.id, cantidad: 1 }] });
+  const cocinaYo = await cocinaAgente.get('/api/auth/yo');
+
+  await cocinaAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'en_preparacion' });
+
+  const transiciones = contenedor.repositorios.pedidoTransicionRepositorio.listarPorPedido(creado.body.id);
+  assert.equal(transiciones[0].usuarioId, cocinaYo.body.id);
+  assert.notEqual(transiciones[0].usuarioId, creado.body.usuarioId);
+});
+
+test('un usuarioId inexistente al cambiar estado revierte el cambio de estado (rollback transaccional)', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const { huesped, plato } = await crearHuespedYPlato(adminAgente);
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+  const creado = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.id, franja: 'almuerzo', items: [{ platoId: plato.id, cantidad: 1 }] });
+
+  assert.throws(() => {
+    contenedor.servicios.pedidosServicio.cambiarEstadoPedido({
+      id: creado.body.id,
+      nuevoEstado: 'en_preparacion',
+      rol: 'cocina',
+      usuarioId: 999999,
+    });
+  });
+
+  const pedido = await meseroAgente.get(`/api/pedidos/${creado.body.id}`);
+  assert.equal(pedido.body.estado, 'pendiente');
+  const transiciones = contenedor.repositorios.pedidoTransicionRepositorio.listarPorPedido(creado.body.id);
+  assert.equal(transiciones.length, 0);
+});

@@ -10,7 +10,7 @@ const TRANSICIONES_PERMITIDAS = {
   'en_preparacion->cancelado': ['mesero', 'cocina'],
 };
 
-function crearPedidosServicio({ pedidosRepositorio, huespedesRepositorio, platosRepositorio, derechoDeComidasServicio, inventarioServicio }) {
+function crearPedidosServicio({ pedidosRepositorio, pedidoTransicionRepositorio, huespedesRepositorio, platosRepositorio, derechoDeComidasServicio, inventarioServicio, conexion }) {
   function verificarHuespedExiste(huespedId) {
     if (!huespedesRepositorio.buscarPorId(huespedId)) {
       throw new ErrorDeNegocio(`El huésped ${huespedId} no existe`, { codigo: 'HUESPED_NO_ENCONTRADO', status: 404 });
@@ -34,6 +34,18 @@ function crearPedidosServicio({ pedidosRepositorio, huespedesRepositorio, platos
       throw new ErrorNoEncontrado(`El pedido ${id} no existe`);
     }
     return pedido;
+  }
+
+  // Cambia el estado y registra la transición en la misma transacción: si
+  // el INSERT de pedido_transicion falla (ej. usuarioId inexistente), el
+  // UPDATE de estado se revierte también. No se llama nunca desde dentro
+  // de otra transacción ya abierta, así que abre la suya sin problema.
+  function registrarTransicion({ id, estadoAnterior, estadoNuevo, usuarioId }) {
+    return conexion.transaction(() => {
+      const actualizado = pedidosRepositorio.cambiarEstado({ id, estado: estadoNuevo });
+      pedidoTransicionRepositorio.registrar({ pedidoId: id, estadoAnterior, estadoNuevo, usuarioId });
+      return actualizado;
+    })();
   }
 
   return {
@@ -67,7 +79,8 @@ function crearPedidosServicio({ pedidosRepositorio, huespedesRepositorio, platos
       if (!rolesPermitidos.includes(rol)) {
         throw new ErrorDeNegocio('No tiene permiso para esta acción', { codigo: 'NO_AUTORIZADO', status: 403 });
       }
-      const actualizado = pedidosRepositorio.cambiarEstado({ id, estado: nuevoEstado });
+
+      const actualizado = registrarTransicion({ id, estadoAnterior: pedido.estado, estadoNuevo: nuevoEstado, usuarioId });
       if (nuevoEstado === 'cancelado') {
         inventarioServicio.restituirPorPedido({ pedidoId: id, usuarioId });
       }
