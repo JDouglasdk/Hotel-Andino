@@ -6,8 +6,9 @@ const esquemaCrearIngrediente = z.object({
   unidadMedida: z.string().trim().min(1).max(20),
 }).strict();
 
-const esquemaActualizarStock = z.object({
-  cantidadStock: z.number().min(0),
+const esquemaRegistrarMovimiento = z.object({
+  delta: z.number().refine((valor) => valor !== 0, { message: 'delta no puede ser 0' }),
+  motivo: z.enum(['compra', 'merma', 'ajuste']),
 }).strict();
 
-module.exports = { esquemaCrearIngrediente, esquemaActualizarStock };
+module.exports = { esquemaCrearIngrediente, esquemaRegistrarMovimiento };

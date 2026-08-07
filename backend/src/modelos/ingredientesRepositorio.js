@@ -3,12 +3,9 @@ function crearIngredientesRepositorio(conexion) {
     INSERT INTO ingredientes (nombre, cantidad_stock, unidad_medida, actualizado_en)
     VALUES (@nombre, @cantidadStock, @unidadMedida, @actualizadoEn)
   `);
-  const actualizarStockStmt = conexion.prepare(`
-    UPDATE ingredientes SET cantidad_stock = @cantidadStock, actualizado_en = @actualizadoEn WHERE id = @id
-  `);
-  const descontarStockSiHayStmt = conexion.prepare(`
-    UPDATE ingredientes SET cantidad_stock = cantidad_stock - @cantidad, actualizado_en = @actualizadoEn
-    WHERE id = @id AND cantidad_stock >= @cantidad
+  const incrementarStockStmt = conexion.prepare(`
+    UPDATE ingredientes SET cantidad_stock = cantidad_stock + @delta, actualizado_en = @actualizadoEn
+    WHERE id = @id AND cantidad_stock + @delta >= 0
   `);
   const buscarPorIdStmt = conexion.prepare('SELECT * FROM ingredientes WHERE id = ?');
   const buscarPorNombreStmt = conexion.prepare('SELECT * FROM ingredientes WHERE nombre = ?');
@@ -35,12 +32,12 @@ function crearIngredientesRepositorio(conexion) {
       const resultado = insertar.run({ nombre, cantidadStock, unidadMedida, actualizadoEn });
       return obtenerPorId(resultado.lastInsertRowid);
     },
-    actualizarStock({ id, cantidadStock }) {
-      actualizarStockStmt.run({ id, cantidadStock, actualizadoEn: new Date().toISOString() });
-      return obtenerPorId(id);
-    },
-    descontarStockSiHay({ id, cantidad }) {
-      const resultado = descontarStockSiHayStmt.run({ id, cantidad, actualizadoEn: new Date().toISOString() });
+    // Único punto de escritura de stock: delta positivo entra, negativo
+    // sale. Atómico vía el WHERE (evita condición de carrera entre leer y
+    // escribir) — reemplaza los antiguos actualizarStock/descontarStockSiHay,
+    // que hacían lo mismo con dos statements casi idénticos.
+    incrementarStock({ id, delta }) {
+      const resultado = incrementarStockStmt.run({ id, delta, actualizadoEn: new Date().toISOString() });
       return resultado.changes;
     },
     buscarPorId(id) {

@@ -11,6 +11,7 @@ const { crearHuespedesRepositorio } = require('./modelos/huespedesRepositorio');
 const { crearPedidosRepositorio } = require('./modelos/pedidosRepositorio');
 const { crearIngredientesRepositorio } = require('./modelos/ingredientesRepositorio');
 const { crearRecetasRepositorio } = require('./modelos/recetasRepositorio');
+const { crearMovimientosIngredienteRepositorio } = require('./modelos/movimientosIngredienteRepositorio');
 const { crearAutenticacionServicio } = require('./servicios/autenticacionServicio');
 const { crearUsuariosServicio } = require('./servicios/usuariosServicio');
 const { crearCategoriasServicio } = require('./servicios/categoriasServicio');
@@ -31,6 +32,7 @@ function crearContenedor(conexion) {
     pedidosRepositorio: crearPedidosRepositorio(conexion),
     ingredientesRepositorio: crearIngredientesRepositorio(conexion),
     recetasRepositorio: crearRecetasRepositorio(conexion),
+    movimientosIngredienteRepositorio: crearMovimientosIngredienteRepositorio(conexion),
   };
 
   const autenticacionServicio = crearAutenticacionServicio({ usuariosRepositorio: repositorios.usuariosRepositorio });
@@ -38,6 +40,8 @@ function crearContenedor(conexion) {
   const ingredientesServicio = crearIngredientesServicio({
     ingredientesRepositorio: repositorios.ingredientesRepositorio,
     recetasRepositorio: repositorios.recetasRepositorio,
+    movimientosIngredienteRepositorio: repositorios.movimientosIngredienteRepositorio,
+    conexion,
   });
 
   const servicios = {

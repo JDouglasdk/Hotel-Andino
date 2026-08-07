@@ -11,12 +11,17 @@ function crearIngredientesControlador({ ingredientesServicio }) {
       });
       res.status(201).json(ingrediente);
     },
-    actualizarStock(req, res) {
-      const ingrediente = ingredientesServicio.actualizarStock({
+    registrarMovimiento(req, res) {
+      const movimiento = ingredientesServicio.registrarMovimiento({
         id: Number(req.params.id),
-        cantidadStock: req.body.cantidadStock,
+        delta: req.body.delta,
+        motivo: req.body.motivo,
+        usuarioId: req.usuario.id,
       });
-      res.json(ingrediente);
+      res.status(201).json(movimiento);
+    },
+    listarMovimientos(req, res) {
+      res.json(ingredientesServicio.listarMovimientos(Number(req.params.id)));
     },
   };
 }

@@ -48,7 +48,11 @@ function crearPedidosServicio({ pedidosRepositorio, huespedesRepositorio, platos
 
       const pedido = pedidosRepositorio.crear({ huespedId, usuarioId, franja, items: itemsConPrecio });
 
-      inventarioServicio.descontarPorPedido({ items: items.map((item) => ({ platoId: item.platoId, cantidad: item.cantidad })) });
+      inventarioServicio.descontarPorPedido({
+        items: items.map((item) => ({ platoId: item.platoId, cantidad: item.cantidad })),
+        usuarioId,
+        pedidoId: pedido.id,
+      });
 
       return pedido;
     },
