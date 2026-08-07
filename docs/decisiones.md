@@ -38,7 +38,7 @@ de plantilla — se descartó, no aplica a este proyecto.
 
 ### Recortable en este orden si falta tiempo
 
-1. Historial detallado de movimientos de inventario (bitácora completa).
+1. ~~Historial detallado de movimientos de inventario (bitácora completa).~~ Completo.
 2. Reporte de platos servidos desglosado por franja (arrancar con total
    simple).
 3. Cancelación de comandas como flujo completo (un estado simple basta).
