@@ -545,3 +545,39 @@ test('un usuarioId inexistente al cambiar estado revierte el cambio de estado (r
   const transiciones = contenedor.repositorios.pedidoTransicionRepositorio.listarPorPedido(creado.body.id);
   assert.equal(transiciones.length, 0);
 });
+
+test('una transición rechazada (rol o transición inválida) no deja fila en pedido_transicion', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const { huesped, plato } = await crearHuespedYPlato(adminAgente);
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+  const creado = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.id, franja: 'almuerzo', items: [{ platoId: plato.id, cantidad: 1 }] });
+
+  const rolInvalido = await meseroAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'en_preparacion' });
+  assert.equal(rolInvalido.status, 403);
+
+  const transicionInvalida = await meseroAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'entregado' });
+  assert.equal(transicionInvalida.status, 409);
+
+  const transiciones = contenedor.repositorios.pedidoTransicionRepositorio.listarPorPedido(creado.body.id);
+  assert.equal(transiciones.length, 0);
+});
+
+test('la transición listo->entregado (mesero) queda registrada', async () => {
+  const { app, contenedor } = crearAppDePrueba();
+  const adminAgente = await iniciarSesionAdmin(app);
+  const { huesped, plato } = await crearHuespedYPlato(adminAgente);
+  const meseroAgente = await iniciarSesionRol(app, contenedor, 'mesero', 'mesero@hotelandino.com');
+  const cocinaAgente = await iniciarSesionRol(app, contenedor, 'cocina', 'cocina@hotelandino.com');
+  const creado = await meseroAgente.post('/api/pedidos').send({ huespedId: huesped.id, franja: 'almuerzo', items: [{ platoId: plato.id, cantidad: 1 }] });
+  await cocinaAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'en_preparacion' });
+  await cocinaAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'listo' });
+
+  const respuesta = await meseroAgente.patch(`/api/pedidos/${creado.body.id}/estado`).send({ estado: 'entregado' });
+
+  assert.equal(respuesta.status, 200);
+  const transiciones = contenedor.repositorios.pedidoTransicionRepositorio.listarPorPedido(creado.body.id);
+  assert.equal(transiciones.length, 3);
+  assert.equal(transiciones[2].estadoAnterior, 'listo');
+  assert.equal(transiciones[2].estadoNuevo, 'entregado');
+});

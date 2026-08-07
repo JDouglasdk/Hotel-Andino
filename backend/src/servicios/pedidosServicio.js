@@ -36,16 +36,20 @@ function crearPedidosServicio({ pedidosRepositorio, pedidoTransicionRepositorio,
     return pedido;
   }
 
-  // Cambia el estado y registra la transición en la misma transacción: si
-  // el INSERT de pedido_transicion falla (ej. usuarioId inexistente), el
-  // UPDATE de estado se revierte también. No se llama nunca desde dentro
-  // de otra transacción ya abierta, así que abre la suya sin problema.
+  // Cambia el estado (solo si sigue en estadoAnterior — ver
+  // pedidosRepositorio.cambiarEstado) y registra la transición. Se llama
+  // siempre desde dentro de la transacción abierta por cambiarEstadoPedido
+  // — no abre la suya propia.
   function registrarTransicion({ id, estadoAnterior, estadoNuevo, usuarioId }) {
-    return conexion.transaction(() => {
-      const actualizado = pedidosRepositorio.cambiarEstado({ id, estado: estadoNuevo });
-      pedidoTransicionRepositorio.registrar({ pedidoId: id, estadoAnterior, estadoNuevo, usuarioId });
-      return actualizado;
-    })();
+    const filasAfectadas = pedidosRepositorio.cambiarEstado({ id, estado: estadoNuevo, estadoAnterior });
+    if (filasAfectadas === 0) {
+      throw new ErrorDeNegocio(
+        `El pedido ${id} ya no está en el estado "${estadoAnterior}" (fue modificado por otra petición)`,
+        { codigo: 'TRANSICION_INVALIDA', status: 409 }
+      );
+    }
+    pedidoTransicionRepositorio.registrar({ pedidoId: id, estadoAnterior, estadoNuevo, usuarioId });
+    return pedidosRepositorio.buscarPorId(id);
   }
 
   return {
@@ -80,11 +84,13 @@ function crearPedidosServicio({ pedidosRepositorio, pedidoTransicionRepositorio,
         throw new ErrorDeNegocio('No tiene permiso para esta acción', { codigo: 'NO_AUTORIZADO', status: 403 });
       }
 
-      const actualizado = registrarTransicion({ id, estadoAnterior: pedido.estado, estadoNuevo: nuevoEstado, usuarioId });
-      if (nuevoEstado === 'cancelado') {
-        inventarioServicio.restituirPorPedido({ pedidoId: id, usuarioId });
-      }
-      return actualizado;
+      return conexion.transaction(() => {
+        const actualizado = registrarTransicion({ id, estadoAnterior: pedido.estado, estadoNuevo: nuevoEstado, usuarioId });
+        if (nuevoEstado === 'cancelado') {
+          inventarioServicio.restituirPorPedido({ pedidoId: id, usuarioId });
+        }
+        return actualizado;
+      })();
     },
 
     obtenerPedidoPorId(id) {

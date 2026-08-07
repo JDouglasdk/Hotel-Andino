@@ -16,8 +16,23 @@ autenticación/usuarios, módulo de menú (categorías/platos), módulo de
 huéspedes, la máquina de estados de comanda (pedidos: crear con
 validación de huésped/plato/disponibilidad, transición de estado por rol,
 cancelación), ingredientes/recetas, validación real de derecho de
-comidas, descuento automático de inventario y caja diaria — 78 tests de
+comidas, descuento automático de inventario y caja diaria — 104 tests de
 integración en verde.
+
+Sobre ese núcleo, tres piezas de auditoría/trazabilidad:
+
+- **Bitácora de movimientos de inventario** (`movimiento_ingrediente`):
+  reemplaza el ajuste absoluto de stock por un registro histórico con
+  motivo/usuario/fecha, y la usa para restituir el stock exacto cuando se
+  cancela un pedido (calculado desde lo que el pedido realmente consumió,
+  no desde la receta actual).
+- **Log de transiciones de pedido** (`pedido_transicion`): cada cambio de
+  estado de una comanda queda registrado (quién, cuándo, de qué estado a
+  cuál), atómicamente junto al cambio. Auditoría interna, sin endpoint ni
+  vista todavía.
+- **Auditoría uniforme de entidades**: `usuarios`, `categorías`, `platos`,
+  `huéspedes` e `ingredientes` registran `creado_por`/`actualizado_por`
+  (donde aplica) — quién creó o editó cada fila.
 
 **Frontend completo**: login funcional, guarda de sesión por rol y
 header persistente en los 4 paneles, cada uno con su lógica de negocio
@@ -31,7 +46,7 @@ real (no placeholder):
 - **Jefe de caja**: caja del día, platos servidos por franja e
   inventario (solo lectura).
 - **Admin**: usuarios, alta de huéspedes, menú (categorías/platos) e
-  ingredientes (con actualización de stock).
+  ingredientes (registrar movimientos de stock con motivo + historial).
 
 Ver `docs/decisiones.md` para el reparto completo.
 
@@ -59,18 +74,21 @@ cd backend && npm test
 cd frontend && npm test
 ```
 
-Mismo formato en ambos (`node --test`). Backend: 78 tests de integración
-en verde (auth/usuarios, menú, huéspedes, pedidos, ingredientes/recetas,
-derecho de comidas, inventario, caja diaria). Frontend: 103 tests
-unitarios en verde (`node --test` + `jsdom`) — cimientos compartidos
-(dialogo.js, clienteApi.js, sesion.js, header.js, panel.js), login, y
-los 4 paneles de rol con su lógica de negocio.
+Mismo formato en ambos (`node --test`). Backend: 104 tests de
+integración en verde (auth/usuarios, menú, huéspedes, pedidos,
+ingredientes/recetas, derecho de comidas, inventario, caja diaria,
+bitácora de movimientos, transiciones de pedido, auditoría de
+entidades). Frontend: 108 tests unitarios en verde (`node --test` +
+`jsdom`) — cimientos compartidos (dialogo.js, clienteApi.js, sesion.js,
+header.js, panel.js), login, y los 4 paneles de rol con su lógica de
+negocio.
 
 ## Próximos pasos
 
-Bitácora de movimientos de inventario: reemplaza el ajuste absoluto de
-stock por un registro histórico (`movimiento_ingrediente`, con
-motivo/usuario/fecha) y lo usa para restituir el stock exacto cuando se
-cancela un pedido — hoy una cancelación no devuelve el inventario ya
-descontado. Diseño y plan de implementación ya cerrados, pendiente de
-construir.
+Backlog priorizado de ideas de repos de referencia, pendientes de que se
+confirme expandir alcance: UI de tarjetas de comanda con cronómetro para
+cocina, resumen jerárquico visual del cierre de caja, dashboard
+financiero (flujo de caja, utilidad, top gastos). A considerar (piden
+aprobación explícita antes de construir): caja como sesión/turno con
+apertura y cierre, tiempo real vía sockets, contabilidad de partida
+doble.

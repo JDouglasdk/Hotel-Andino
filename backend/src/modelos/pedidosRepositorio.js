@@ -7,7 +7,9 @@ function crearPedidosRepositorio(conexion) {
     INSERT INTO items_pedido (pedido_id, plato_id, cantidad, precio_unitario)
     VALUES (@pedidoId, @platoId, @cantidad, @precioUnitario)
   `);
-  const cambiarEstadoStmt = conexion.prepare('UPDATE pedidos SET estado = @estado WHERE id = @id');
+  const cambiarEstadoStmt = conexion.prepare(
+    'UPDATE pedidos SET estado = @estado WHERE id = @id AND estado = @estadoAnterior'
+  );
   const buscarPedidoPorIdStmt = conexion.prepare('SELECT * FROM pedidos WHERE id = ?');
   const buscarItemsPorPedidoStmt = conexion.prepare('SELECT * FROM items_pedido WHERE pedido_id = ?');
   const franjasConsumidasHoyStmt = conexion.prepare(`
@@ -63,9 +65,9 @@ function crearPedidosRepositorio(conexion) {
       const pedidoId = crearConItems({ huespedId, usuarioId, franja, items });
       return obtenerPorId(pedidoId);
     },
-    cambiarEstado({ id, estado }) {
-      cambiarEstadoStmt.run({ id, estado });
-      return obtenerPorId(id);
+    cambiarEstado({ id, estado, estadoAnterior }) {
+      const resultado = cambiarEstadoStmt.run({ id, estado, estadoAnterior });
+      return resultado.changes;
     },
     buscarPorId(id) {
       return obtenerPorId(id);
