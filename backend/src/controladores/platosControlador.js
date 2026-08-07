@@ -10,6 +10,7 @@ function crearPlatosControlador({ platosServicio }) {
         nombre: req.body.nombre,
         precio: req.body.precio,
         informacion: req.body.informacion,
+        usuarioId: req.usuario.id,
       });
       res.status(201).json(plato);
     },
@@ -20,11 +21,16 @@ function crearPlatosControlador({ platosServicio }) {
         nombre: req.body.nombre,
         precio: req.body.precio,
         informacion: req.body.informacion,
+        usuarioId: req.usuario.id,
       });
       res.json(plato);
     },
     cambiarDisponibilidad(req, res) {
-      const plato = platosServicio.cambiarDisponibilidadPlato({ id: Number(req.params.id), disponible: req.body.disponible });
+      const plato = platosServicio.cambiarDisponibilidadPlato({
+        id: Number(req.params.id),
+        disponible: req.body.disponible,
+        usuarioId: req.usuario.id,
+      });
       res.json(plato);
     },
     reemplazarReceta(req, res) {

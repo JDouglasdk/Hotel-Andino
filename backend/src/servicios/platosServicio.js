@@ -20,20 +20,20 @@ function crearPlatosServicio({ platosRepositorio, categoriasRepositorio, recetas
   }
 
   return {
-    crearPlato({ categoriaId, nombre, precio, informacion }) {
+    crearPlato({ categoriaId, nombre, precio, informacion, usuarioId }) {
       verificarCategoriaExiste(categoriaId);
-      return platosRepositorio.crear({ categoriaId, nombre, precio, informacion });
+      return platosRepositorio.crear({ categoriaId, nombre, precio, informacion, usuarioId });
     },
 
-    actualizarPlato({ id, categoriaId, nombre, precio, informacion }) {
+    actualizarPlato({ id, categoriaId, nombre, precio, informacion, usuarioId }) {
       verificarPlatoExiste(id);
       verificarCategoriaExiste(categoriaId);
-      return platosRepositorio.actualizar({ id, categoriaId, nombre, precio, informacion });
+      return platosRepositorio.actualizar({ id, categoriaId, nombre, precio, informacion, usuarioId });
     },
 
-    cambiarDisponibilidadPlato({ id, disponible }) {
+    cambiarDisponibilidadPlato({ id, disponible, usuarioId }) {
       verificarPlatoExiste(id);
-      return platosRepositorio.cambiarDisponibilidad({ id, disponible });
+      return platosRepositorio.cambiarDisponibilidad({ id, disponible, usuarioId });
     },
 
     listarPlatos({ categoriaId, disponible } = {}) {

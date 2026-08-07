@@ -205,3 +205,59 @@ test('reemplazar la receta dos veces deja solo la última versión', async () =>
   assert.equal(respuesta.body.length, 1);
   assert.equal(respuesta.body[0].ingredienteId, carne.body.id);
 });
+
+test('crear un plato asigna creadoPor', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const yo = await agente.get('/api/auth/yo');
+  const categoria = await crearCategoria(agente, 'Entradas');
+
+  const respuesta = await agente.post('/api/platos').send({ categoriaId: categoria.id, nombre: 'Empanadas', precio: 8000 });
+
+  assert.equal(respuesta.status, 201);
+  assert.equal(respuesta.body.creadoPor, yo.body.id);
+  assert.equal(respuesta.body.actualizadoPor, null);
+});
+
+test('editar un plato asigna actualizadoPor y actualizadoEn', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const yo = await agente.get('/api/auth/yo');
+  const categoria = await crearCategoria(agente, 'Entradas');
+  const creado = await agente.post('/api/platos').send({ categoriaId: categoria.id, nombre: 'Empanadas', precio: 8000 });
+
+  const respuesta = await agente.put(`/api/platos/${creado.body.id}`).send({ categoriaId: categoria.id, nombre: 'Empanadas grandes', precio: 9000 });
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.body.actualizadoPor, yo.body.id);
+  assert.ok(respuesta.body.actualizadoEn);
+});
+
+test('cambiar disponibilidad de un plato asigna actualizadoPor y actualizadoEn', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const yo = await agente.get('/api/auth/yo');
+  const categoria = await crearCategoria(agente, 'Entradas');
+  const creado = await agente.post('/api/platos').send({ categoriaId: categoria.id, nombre: 'Empanadas', precio: 8000 });
+
+  const respuesta = await agente.patch(`/api/platos/${creado.body.id}/disponibilidad`).send({ disponible: false });
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.body.actualizadoPor, yo.body.id);
+  assert.ok(respuesta.body.actualizadoEn);
+});
+
+test('reemplazar la receta de un plato NO cambia actualizadoPor ni actualizadoEn del plato', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const categoria = await crearCategoria(agente, 'Entradas');
+  const creado = await agente.post('/api/platos').send({ categoriaId: categoria.id, nombre: 'Empanadas', precio: 8000 });
+  const ingrediente = await agente.post('/api/ingredientes').send({ nombre: 'Harina', cantidadStock: 100, unidadMedida: 'kg' });
+
+  await agente.post(`/api/platos/${creado.body.id}/receta`).send({ items: [{ ingredienteId: ingrediente.body.id, cantidadRequerida: 0.2 }] });
+
+  const platos = await agente.get('/api/platos');
+  const plato = platos.body.find((p) => p.id === creado.body.id);
+  assert.equal(plato.actualizadoPor, null);
+  assert.equal(plato.actualizadoEn, null);
+});
