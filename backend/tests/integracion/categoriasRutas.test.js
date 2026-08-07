@@ -97,3 +97,29 @@ test('renombrar una categoría inexistente responde 404', async () => {
 
   assert.equal(respuesta.status, 404);
 });
+
+test('crear una categoría asigna creadoPor y creadoEn', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const yo = await agente.get('/api/auth/yo');
+
+  const respuesta = await agente.post('/api/categorias').send({ nombre: 'Entradas' });
+
+  assert.equal(respuesta.status, 201);
+  assert.equal(respuesta.body.creadoPor, yo.body.id);
+  assert.ok(respuesta.body.creadoEn);
+  assert.equal(respuesta.body.actualizadoPor, null);
+});
+
+test('renombrar una categoría asigna actualizadoPor y actualizadoEn', async () => {
+  const { app } = crearAppDePrueba();
+  const agente = await iniciarSesionAdmin(app);
+  const yo = await agente.get('/api/auth/yo');
+  const creada = await agente.post('/api/categorias').send({ nombre: 'Entradas' });
+
+  const respuesta = await agente.put(`/api/categorias/${creada.body.id}`).send({ nombre: 'Entradas frías' });
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.body.actualizadoPor, yo.body.id);
+  assert.ok(respuesta.body.actualizadoEn);
+});
