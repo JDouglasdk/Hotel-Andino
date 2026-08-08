@@ -138,6 +138,50 @@ window.Comun = window.Comun || {};
     return boton;
   }
 
+  // Minutos transcurridos desde creadoEn hasta ahora. null = fecha
+  // invalida/no confiable (nunca se muestra un valor inventado). Clampeado
+  // a 0 si creadoEn queda en el futuro (desfase de reloj, dato
+  // inconsistente) — nunca un valor negativo.
+  function minutosTranscurridos(creadoEn, ahora) {
+    const fecha = new Date(creadoEn);
+    if (Number.isNaN(fecha.getTime())) return null;
+    const minutos = Math.floor((ahora.getTime() - fecha.getTime()) / 60000);
+    return Math.max(0, minutos);
+  }
+
+  // Umbrales: <10 baja (verde), 10-19 media (amarillo), 20+ alta (rojo).
+  function nivelDeUrgencia(minutos) {
+    if (minutos < 10) return 'baja';
+    if (minutos < 20) return 'media';
+    return 'alta';
+  }
+
+  function crearBadgeCronometro() {
+    const badge = document.createElement('span');
+    badge.className = 'tarjeta-pedido-cronometro';
+    badge.hidden = true; // hasta el primer actualizarBadgeCronometro
+    return badge;
+  }
+
+  function actualizarBadgeCronometro(tarjeta, ahora) {
+    const badge = tarjeta.querySelector('.tarjeta-pedido-cronometro');
+    if (!badge) return;
+    const minutos = minutosTranscurridos(tarjeta.dataset.creadoEn, ahora);
+    if (minutos === null) {
+      badge.hidden = true;
+      return;
+    }
+    badge.hidden = false;
+    badge.textContent = minutos + ' min';
+    badge.dataset.urgencia = nivelDeUrgencia(minutos);
+  }
+
+  function actualizarCronometros(ahora) {
+    document.querySelectorAll('.tarjeta-pedido').forEach((tarjeta) => {
+      actualizarBadgeCronometro(tarjeta, ahora);
+    });
+  }
+
   function crearTarjetaPedido(pedido) {
     const tarjeta = document.createElement('article');
     tarjeta.className = 'tarjeta-pedido';
@@ -157,7 +201,9 @@ window.Comun = window.Comun || {};
     franja.dataset.franja = pedido.franja;
     franja.textContent = ETIQUETAS_FRANJA[pedido.franja] || pedido.franja;
 
-    cabecera.append(numero, franja);
+    const cronometro = crearBadgeCronometro();
+
+    cabecera.append(numero, franja, cronometro);
 
     // No hay endpoint para resolver el nombre del huésped por id: el número basta
     // para cruzar la tarjeta contra la comanda física que trae el mesero.
@@ -180,6 +226,7 @@ window.Comun = window.Comun || {};
     });
 
     tarjeta.append(cabecera, huesped, items, acciones);
+    actualizarBadgeCronometro(tarjeta, new Date());
     return tarjeta;
   }
 
@@ -272,6 +319,9 @@ window.Comun = window.Comun || {};
       window.Comun._cocinaCargando = cargarColas();
     });
     window.Comun._cocinaCargando = cargarNombresDePlatos().then(cargarColas);
+
+    setInterval(() => actualizarCronometros(new Date()), 60000);
+    window.Comun._actualizarCronometros = actualizarCronometros; // hook de test
   }
 
   window.Comun._panelListo = window.Comun.panel.inicializar({

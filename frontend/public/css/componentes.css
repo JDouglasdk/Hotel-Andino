@@ -478,6 +478,18 @@
 .insignia-franja[data-franja="almuerzo"] { background: var(--color-rol-jefeDeCaja); }
 .insignia-franja[data-franja="cena"] { background: var(--color-rol-admin); }
 
+.tarjeta-pedido-cronometro {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 2px var(--espacio-2);
+  border-radius: 999px;
+  color: #FFFFFF;
+}
+
+.tarjeta-pedido-cronometro[data-urgencia="baja"] { background: var(--color-exito); }
+.tarjeta-pedido-cronometro[data-urgencia="media"] { background: var(--color-advertencia); }
+.tarjeta-pedido-cronometro[data-urgencia="alta"] { background: var(--color-error); }
+
 .tarjeta-pedido-huesped {
   margin: 0;
   color: var(--color-texto-secundario);

@@ -300,3 +300,71 @@ test('el botón "Actualizar" vuelve a pedir ambas colas y refresca el tablero', 
   assert.deepEqual(tarjetasDe(documento, 'cola-en-preparacion'), ['9']);
   assert.equal(documento.getElementById('boton-actualizar-pedidos').disabled, false);
 });
+
+test('el badge de cronómetro se pinta correctamente según minutos transcurridos', async () => {
+  const { dom, documento } = await montarPanelCocina();
+  const ahora = new Date('2026-08-05T12:09:00.000Z'); // 9 min después del pedido 11 (creado 12:00:00)
+
+  dom.window.Comun._actualizarCronometros(ahora);
+
+  const badge = tarjetaDe(documento, '11').querySelector('.tarjeta-pedido-cronometro');
+  assert.equal(badge.hidden, false);
+  assert.equal(badge.textContent, '9 min');
+  assert.equal(badge.dataset.urgencia, 'baja');
+});
+
+test('el badge pasa a "media" a los 10 minutos exactos', async () => {
+  const { dom, documento } = await montarPanelCocina();
+  const ahora = new Date('2026-08-05T12:10:00.000Z'); // 10 min exactos
+
+  dom.window.Comun._actualizarCronometros(ahora);
+
+  const badge = tarjetaDe(documento, '11').querySelector('.tarjeta-pedido-cronometro');
+  assert.equal(badge.dataset.urgencia, 'media');
+});
+
+test('el badge pasa a "alta" a los 20 minutos exactos', async () => {
+  const { dom, documento } = await montarPanelCocina();
+  const ahora = new Date('2026-08-05T12:20:00.000Z'); // 20 min exactos
+
+  dom.window.Comun._actualizarCronometros(ahora);
+
+  const badge = tarjetaDe(documento, '11').querySelector('.tarjeta-pedido-cronometro');
+  assert.equal(badge.dataset.urgencia, 'alta');
+});
+
+test('un creadoEn en el futuro nunca muestra minutos negativos', async () => {
+  const { dom, documento } = await montarPanelCocina();
+  // Pedido 12 fue creado a las 12:05; "ahora" queda 5 min antes por desfase de reloj.
+  const ahora = new Date('2026-08-05T12:00:00.000Z');
+
+  dom.window.Comun._actualizarCronometros(ahora);
+
+  const badge = tarjetaDe(documento, '12').querySelector('.tarjeta-pedido-cronometro');
+  assert.equal(badge.hidden, false);
+  assert.equal(badge.textContent, '0 min');
+  assert.equal(badge.dataset.urgencia, 'baja');
+});
+
+test('un creadoEn inválido oculta el badge sin afectar el resto de la tarjeta', async () => {
+  const rutas = rutasPorDefecto();
+  rutas[RUTA_PENDIENTES] = () => respuestaOk([
+    Object.assign({}, PEDIDO_PENDIENTE_11, { creadoEn: 'no-es-una-fecha' }),
+  ]);
+  const { documento } = await montarPanelCocina(rutas);
+
+  const tarjeta = tarjetaDe(documento, '11');
+  const badge = tarjeta.querySelector('.tarjeta-pedido-cronometro');
+  assert.equal(badge.hidden, true);
+  // El resto de la tarjeta sigue intacto.
+  assert.equal(tarjeta.querySelector('.tarjeta-pedido-numero').textContent, 'Pedido #11');
+  assert.equal(botonDe(tarjeta, 'en_preparacion').textContent, 'Iniciar preparación');
+});
+
+test('una tarjeta recién renderizada ya trae su cronómetro pintado, sin esperar el primer tick', async () => {
+  const { documento } = await montarPanelCocina();
+
+  const badge = tarjetaDe(documento, '11').querySelector('.tarjeta-pedido-cronometro');
+  assert.equal(badge.hidden, false);
+  assert.match(badge.textContent, /^\d+ min$/);
+});
