@@ -203,7 +203,11 @@ window.Comun = window.Comun || {};
 
     const cronometro = crearBadgeCronometro();
 
-    cabecera.append(numero, franja, cronometro);
+    const insignias = document.createElement('div');
+    insignias.className = 'tarjeta-pedido-insignias';
+    insignias.append(franja, cronometro);
+
+    cabecera.append(numero, insignias);
 
     // No hay endpoint para resolver el nombre del huésped por id: el número basta
     // para cruzar la tarjeta contra la comanda física que trae el mesero.

@@ -490,6 +490,12 @@
 .tarjeta-pedido-cronometro[data-urgencia="media"] { background: var(--color-advertencia); }
 .tarjeta-pedido-cronometro[data-urgencia="alta"] { background: var(--color-error); }
 
+.tarjeta-pedido-insignias {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
 .tarjeta-pedido-huesped {
   margin: 0;
   color: var(--color-texto-secundario);

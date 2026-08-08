@@ -195,6 +195,26 @@ test('"Iniciar preparación" hace PATCH y mueve la tarjeta a la cola de en prepa
   assert.equal(documento.getElementById('error-cocina').hidden, true);
 });
 
+test('el cronómetro no se reinicia al cambiar de estado', async () => {
+  const rutas = rutasPorDefecto();
+  rutas['/api/pedidos/11/estado'] = () => respuestaOk(
+    Object.assign({}, PEDIDO_PENDIENTE_11, { estado: 'en_preparacion' }),
+  );
+  const { dom, documento } = await montarPanelCocina(rutas);
+
+  clic(dom, botonDe(tarjetaDe(documento, '11'), 'en_preparacion'));
+  await dom.window.Comun._cocinaAccion;
+
+  // Pedido 11 fue creado a las 12:00:00; 15 min después de la transición
+  // sigue contando desde la creación original, no desde el cambio de estado.
+  const ahora = new Date('2026-08-05T12:15:00.000Z');
+  dom.window.Comun._actualizarCronometros(ahora);
+
+  const badge = tarjetaDe(documento, '11').querySelector('.tarjeta-pedido-cronometro');
+  assert.equal(badge.textContent, '15 min');
+  assert.equal(badge.dataset.urgencia, 'media');
+});
+
 test('"Marcar listo" saca la tarjeta del tablero y deja el aviso de cola vacía', async () => {
   const rutas = rutasPorDefecto();
   rutas['/api/pedidos/9/estado'] = () => respuestaOk(
@@ -338,6 +358,7 @@ test('el badge pasa a "media" a los 10 minutos exactos', async () => {
   dom.window.Comun._actualizarCronometros(ahora);
 
   const badge = tarjetaDe(documento, '11').querySelector('.tarjeta-pedido-cronometro');
+  assert.equal(badge.textContent, '10 min');
   assert.equal(badge.dataset.urgencia, 'media');
 });
 
@@ -348,6 +369,7 @@ test('el badge pasa a "alta" a los 20 minutos exactos', async () => {
   dom.window.Comun._actualizarCronometros(ahora);
 
   const badge = tarjetaDe(documento, '11').querySelector('.tarjeta-pedido-cronometro');
+  assert.equal(badge.textContent, '20 min');
   assert.equal(badge.dataset.urgencia, 'alta');
 });
 
