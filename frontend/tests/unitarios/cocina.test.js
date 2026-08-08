@@ -69,10 +69,18 @@ function rutasPorDefecto() {
   };
 }
 
+// El panel arranca un setInterval real (para el cronómetro de las
+// tarjetas) que JSDOM no limpia solo — sin cerrarlo, el proceso de test
+// nunca drena su event loop y `npm test` se cuelga. `domActual` guarda
+// la ventana del montaje más reciente para que el afterEach de abajo la
+// cierre después de cada test.
+let domActual = null;
+
 // Monta cocina.html con dialogo/clienteApi/panel reales y stubs de sesion/header.
 // `rutas` mapea la ruta pedida a una función (opciones) => respuesta simulada.
 async function montarPanelCocina(rutas = rutasPorDefecto()) {
   const dom = crearDom(RUTA_COCINA_HTML);
+  domActual = dom;
   const llamadas = [];
 
   dom.window.Comun = {
@@ -97,6 +105,16 @@ async function montarPanelCocina(rutas = rutasPorDefecto()) {
 
   return { dom, documento: dom.window.document, llamadas };
 }
+
+// Cierra la ventana JSDOM del test anterior: detiene el setInterval real
+// del cronómetro (window.close() sí lo limpia, verificado) para que el
+// proceso de `node --test` pueda salir en vez de quedarse colgado.
+test.afterEach(() => {
+  if (domActual) {
+    domActual.window.close();
+    domActual = null;
+  }
+});
 
 function clic(dom, elemento) {
   elemento.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
